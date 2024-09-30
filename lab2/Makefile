@@ -18,6 +18,9 @@ all: $(TARGETS)
 BackSubs: BackSubs.c
 	$(CC) $< $(CFLAGS) -o $@
 
+BackSubsOmp: BackSubs_omp.c
+	$(CC) $< $(CFLAGS) -o $@
+
 BackSubs_i: BackSubs.c
 	$(CC) -D_EXTRAE_ $(CFLAGS) $(OPENMP) $(IINCL) $< -o $@ $(ILIBS)
 
