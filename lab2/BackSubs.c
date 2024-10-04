@@ -71,28 +71,31 @@ void GENMAT_IP(fp_t *A, int m, int n, int scale, int seed)
 		for( i = 0; i < m; ++i ) {
 			A[j*m+i] = (fp_t) drand48();
 			if ( j == i )
-				A[j*m+i] += scale;
+				A[j*m+i] += scale; //This add is only for numerical stability 
 		}
   	}
 }
 
 int trsm_setup(int check, int m, int n, int b, int lda, int ldb, fp_t **A, fp_t **B, fp_t **Bchk) 
 {
-	fp_t *lA = *A = malloc(lda*m*sizeof(fp_t));
+	//Generate a random matrix A (upper triangular)
+    fp_t *lA = *A = malloc(lda*m*sizeof(fp_t));
 	if ( lA == NULL )
 		return 1;
-
+    
 	GENMAT_IP(lA, lda, m, 1,0);
         int j, i;
 	for (j = 0; j < m; ++j ) 
 		for( i = 0; i < j; ++i ) 
 			lA[j*m+i] = (fp_t) 0.0;
 
+    //Generate a random matrix B
 	fp_t *lB = *B = malloc(ldb * n * sizeof(fp_t));
 	if (lB == NULL)
 		return 2;
 	GENMAT_IP(lB, ldb, n, 1,1);
 
+    //Backup matrix B for checking purposes of the solution
 	fp_t *lBchk = *Bchk = malloc(ldb * n * sizeof(fp_t));
 	if (lBchk == NULL)
 		return 3;
@@ -143,6 +146,7 @@ int main(int argc, char *argv[]) {
     START_COUNT_TIME;
 #endif
 
+    //Initialize the matrices A, B, and backup Bchk (B)
     if ( trsm_setup(check, m, n, b, lda, ldb, &A, &B, &Bchk) ) {
 		fprintf(stderr, "err: allocating matrix\n");
 		return 2;
@@ -159,12 +163,26 @@ int main(int argc, char *argv[]) {
 
     int i,j;
      
-    for (i=size-1; i>=0; i--) {
-        B[i]=B[i] / A[i*m+i];
-        for (j=0; j<i; j++) {
-           B[j]=B[j]-B[i] * A[j*m+i];
+    // Loop through the rows of the matrix A, starting from the last row (i = size-1) and going upwards.
+    // This is backward substitution: we start solving from the last equation and work our way up.
+    for (i = size - 1; i >= 0; i--) {
+        
+        // Solve for the current variable B[i] by dividing it by the diagonal element A[i*m + i].
+        // Since A is upper triangular, A[i*m + i] is the diagonal element in row i.
+        // This step isolates the variable in the current row of the system (A[i][i] * B[i] = B[i]).
+        B[i] = B[i] / A[i * m + i];  // Update B[i] with the solution for this variable.
+
+        // Now, subtract the effect of this solved variable B[i] from all the previous rows (j = 0 to i-1).
+        // This eliminates the contribution of B[i] in the previous rows.
+        for (j = 0; j < i; j++) {
+
+            // Update B[j] by subtracting B[i] * A[j*m + i].
+            // This step removes the contribution of the already solved variable B[i] from row j.
+            // The idea is to simplify the remaining equations as we move upwards in the matrix.
+            B[j] = B[j] - B[i] * A[j * m + i];  // Update B[j] for the next iteration.
         }
     }
+
     
 #if _EXTRAE_
     Extrae_event (PROGRAM, END);

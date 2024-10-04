@@ -33,6 +33,9 @@ BackSubs_omp_i: BackSubs_omp.c
 BackSubs_mpi: BackSubs_mpi.c
 	$(MPICC) $< $(CFLAGS) $(CINCL) -o $@ $(CLIBS)
 
+BackSubs_mpi_q8: BackSubs_mpi_q8.c
+	$(MPICC) $< $(CFLAGS) $(CINCL) -o $@ $(CLIBS)
+
 BackSubs_blas: BackSubs_blas.c
 	$(CC) $< $(BLASFLAGS) -o $@
 

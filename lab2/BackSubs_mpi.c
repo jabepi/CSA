@@ -144,20 +144,24 @@ int main(int argc, char *argv[]) {
     reps = 1;
     check = 1;
     
+    // Initialize the MPI environment
     MPI_Init(&argc, &argv); 
-    MPI_Comm_size(MPI_COMM_WORLD, &numprocs); 
-    MPI_Comm_rank(MPI_COMM_WORLD, &myid); 
+    MPI_Comm_size(MPI_COMM_WORLD, &numprocs);  // Get the total number of processes
+    MPI_Comm_rank(MPI_COMM_WORLD, &myid);      // Get the rank of the current process
 
-    if (myid==0) { // Only Id 0 creates the matrix to share it
-       if ( trsm_setup(check, m, n, b, lda, ldb, &A, &B, &Bchk) ) {
-		fprintf(stderr, "err: allocating matrix\n");
-		return 2;
-       }
-    } else {
-       A = malloc(lda*m*sizeof(fp_t));
-       B = malloc(ldb * n * sizeof(fp_t));
-       if (A==NULL || B==NULL ) 
-          return 1;
+
+    // Process 0 initializes the matrices A and B
+    if (myid == 0) { 
+    if ( trsm_setup(check, m, n, b, lda, ldb, &A, &B, &Bchk) ) {
+            fprintf(stderr, "err: allocating matrix\n");
+            return 2;
+    }
+    } else { 
+    // Other processes allocate space for matrices A and B but don't initialize them
+    A = malloc(lda * m * sizeof(fp_t));  
+    B = malloc(ldb * n * sizeof(fp_t));
+    if (A == NULL || B == NULL) 
+        return 1;
     }
 
 #if _EXTRAE_
@@ -173,7 +177,8 @@ int main(int argc, char *argv[]) {
     Extrae_event (PROGRAM, PARALLEL);
 #endif
 
-    MPI_Bcast(A, lda*m, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    // Broadcast the full matrix A and vector B from process 0 to all processes
+    MPI_Bcast(A, lda * m, MPI_DOUBLE, 0, MPI_COMM_WORLD); 
     MPI_Bcast(B, ldb * n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
 #if _EXTRAE_
@@ -182,26 +187,38 @@ int main(int argc, char *argv[]) {
     if (myid == 0) START_COUNT_TIME;
 #endif
 
-    int linesperprocess=size/numprocs;
-    int mylinesinit=myid*linesperprocess;
-    int mylinesend=(myid+1)*linesperprocess;
-    if ((mylinesend+linesperprocess) > size)
-       mylinesend=size;
+    // Divide the rows of the matrix between processes
+    int linesperprocess = size / numprocs;        // Number of rows per process
+    int mylinesinit = myid * linesperprocess;     // Starting row index for this process
+    int mylinesend = (myid + 1) * linesperprocess; // Ending row index for this process
+    if ((mylinesend + linesperprocess) > size)    // Ensure that end index does not exceed matrix size
+        mylinesend = size;
 
     int i,j;
 
-    for (i=size-1; i>=0; i--) {
-        int sender=i/linesperprocess;
-        if (sender>=numprocs) sender=numprocs-1;
-        if (i>=mylinesinit && i<mylinesend) {
-            B[i]=B[i] / A[i*m+i];
-	    for (int receiver=sender-1;receiver>=0;receiver--)
-	        MPI_Send(&B[i], 1, MPI_DOUBLE, receiver, 0, MPI_COMM_WORLD);
-	}
-	if (i>=mylinesend)
-	    MPI_Recv(&B[i], i, MPI_DOUBLE, sender, 0, MPI_COMM_WORLD, &status);
-        for (j=mylinesinit; j<i && j<mylinesend; j++) {
-            B[j]=B[j]-B[i] * A[j*m+i];
+    // Backward substitution loop from the last row to the first
+    for (i = size - 1; i >= 0; i--) {
+        int sender = i / linesperprocess;  // Determine which process owns row i
+        if (sender >= numprocs) sender = numprocs - 1;
+
+        // If this process owns row i
+        if (i >= mylinesinit && i < mylinesend) {
+            // Perform the backward substitution for this row
+            B[i] = B[i] / A[i * m + i];  // Solve for B[i]
+            
+            // Send the computed value of B[i] to all processes that need it
+            for (int receiver = sender - 1; receiver >= 0; receiver--) {
+                MPI_Send(&B[i], 1, MPI_DOUBLE, receiver, 0, MPI_COMM_WORLD);
+            }
+        }
+        
+        // If this process doesn't own row i, receive the value of B[i] from the owner
+        if (i >= mylinesend)
+            MPI_Recv(&B[i], 1, MPI_DOUBLE, sender, 0, MPI_COMM_WORLD, &status);
+
+        // Update the rows below i for this process (only rows assigned to this process)
+        for (j = mylinesinit; j < i && j < mylinesend; j++) {
+            B[j] = B[j] - B[i] * A[j * m + i];  // Subtract the contribution of B[i] from B[j]
         }
     }
 
