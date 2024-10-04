@@ -1,0 +1,12 @@
+
+BackSubs_mpi_q8:609191 terminated with signal 11 at PC=556884153909 SP=7ffe27b48720.  Backtrace:
+/scratch/nas/1/sca1002/LABS/lab2/./BackSubs_mpi_q8(+0x1909)[0x556884153909]
+/lib/x86_64-linux-gnu/libc.so.6(+0x29d90)[0x70c7ccc29d90]
+/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x80)[0x70c7ccc29e40]
+/scratch/nas/1/sca1002/LABS/lab2/./BackSubs_mpi_q8(+0x1f75)[0x556884153f75]
+srun: error: boada-13: task 1: Exited with exit code 1
+srun: got SIGCONT
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+slurmstepd: error: *** JOB 214952 ON boada-13 CANCELLED AT 2024-10-04T18:21:07 ***
+slurmstepd: error: *** STEP 214952.0 ON boada-13 CANCELLED AT 2024-10-04T18:21:07 ***
+srun: forcing job termination
