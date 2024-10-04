@@ -115,6 +115,14 @@ void trsm_shutdown(fp_t *A, fp_t *B, fp_t *X)
 int main(int argc, char *argv[]) {
 
 
+    #pragma omp parallel
+    {
+        #pragma omp master
+        {
+            printf("Running with %d threads\n", omp_get_num_threads());
+        }
+    }
+
     const char Usage[] = "Usage: BackSubs <size> (try 10000)\n";
     if (argc < 2) {
         fprintf(stderr, Usage);
