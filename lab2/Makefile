@@ -24,6 +24,9 @@ BackSubsOmp: BackSubs_omp.c
 BackSubsOmpTime: BackSubs_omp_time.c
 	$(CC) $< $(CFLAGS) -o $@.o
 
+BackSubsBLAS: BackSubs_blas.c
+	$(CC) $< $(BLASFLAGS) -o $@.o
+
 BackSubs_i: BackSubs.c
 	$(CC) -D_EXTRAE_ $(CFLAGS) $(OPENMP) $(IINCL) $< -o $@ $(ILIBS)
 
