@@ -4,7 +4,8 @@
 #include <stdlib.h>                                                                          
 #include <time.h>
 #include <math.h>
-#include <omp.h>
+#include <cblas.h>
+#include <clapack.h>
 
 /* header files for getting hostname and process id */                                                                                                                             
 #include <unistd.h>
@@ -114,15 +115,6 @@ void trsm_shutdown(fp_t *A, fp_t *B, fp_t *X)
 
 int main(int argc, char *argv[]) {
 
-
-    #pragma omp parallel
-    {
-        #pragma omp master
-        {
-            printf("Running with %d threads\n", omp_get_num_threads());
-        }
-    }
-
     const char Usage[] = "Usage: BackSubs <size> (try 10000)\n";
     if (argc < 2) {
         fprintf(stderr, Usage);
@@ -147,9 +139,6 @@ int main(int argc, char *argv[]) {
 
 #if _EXTRAE_
     Extrae_event (PROGRAM, SERIAL);
-#else
-    double stamp;
-    START_COUNT_TIME;
 #endif
 
     if ( trsm_setup(check, m, n, b, lda, ldb, &A, &B, &Bchk) ) {
@@ -164,23 +153,22 @@ int main(int argc, char *argv[]) {
     /* do computation -- using all available threads */
 #if _EXTRAE_
     Extrae_event (PROGRAM, PARALLEL);
+#else
+    double stamp;
+    START_COUNT_TIME;
 #endif
 
-
-    int i,j;
-    for (i=size-1; i>=0; i--) {
-        B[i] = B[i] / A[i * m + i];
-        #pragma omp parallel for private(j)
-        for (j = 0; j < i; j++) {
-           B[j] = B[j] - B[i] * A[j * m + i];
-        }
-    }
+    cblas_dtrsm(CblasRowMajor, CblasLeft, CblasUpper, CblasNoTrans, 
+                CblasNonUnit, size, 1, 1.0, A, lda, B, ldb);
     
 #if _EXTRAE_
     Extrae_event (PROGRAM, END);
     Extrae_event (PROGRAM, SERIAL);
+#else
+    STOP_COUNT_TIME("");
 #endif
 
+   int i, j;
    if (size<=1000) {
         if (size<=10) { // Simple printing code for debug purposes    
             for ( i = 0; i < lda*m; ++i ) 
@@ -207,8 +195,6 @@ int main(int argc, char *argv[]) {
 
 #if _EXTRAE_
     Extrae_event (PROGRAM, END);
-#else
-    STOP_COUNT_TIME("");
 #endif       
  
     trsm_shutdown(A, B, Bchk);

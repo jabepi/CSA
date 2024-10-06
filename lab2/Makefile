@@ -16,16 +16,25 @@ TARGETS = BackSubs BackSubs_i BackSubs_omp BackSubs_omp_i BackSubs_mpi BackSubs_
 all: $(TARGETS)
 
 BackSubs: BackSubs.c
-	$(CC) $< $(CFLAGS) -o $@
+	$(CC) $< $(CFLAGS) -o $@.o
 
 BackSubsOmp: BackSubs_omp.c
-	$(CC) $< $(CFLAGS) -o $@
+	$(CC) $< $(CFLAGS) -o $@.o
+
+BackSubsOmpTime: BackSubs_omp_time.c
+	$(CC) $< $(CFLAGS) -o $@.o
+
+BackSubsBLAS: BackSubs_blas.c
+	$(CC) $< $(BLASFLAGS) -o $@.o
 
 BackSubs_i: BackSubs.c
 	$(CC) -D_EXTRAE_ $(CFLAGS) $(OPENMP) $(IINCL) $< -o $@ $(ILIBS)
 
 BackSubs_omp: BackSubs_omp.c
-	$(CC) $(CFLAGS) $(OPENMP) $< -o $@
+	$(CC) $(CFLAGS) $(OPENMP) $< -o $@.o
+	
+BackSubs_omp_trace: BackSubs_omp.c
+	$(CC) -D_EXTRAE_ $(CFLAGS) $(OPENMP) $(IINCL) $< -o $@.o $(ILIBS)
 
 BackSubs_omp_i: BackSubs_omp.c
 	$(CC) -D_EXTRAE_ $(CFLAGS) $(OPENMP) $(IINCL) $< -o $@ $(ILIBS)

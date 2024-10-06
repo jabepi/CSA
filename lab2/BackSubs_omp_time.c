@@ -147,9 +147,6 @@ int main(int argc, char *argv[]) {
 
 #if _EXTRAE_
     Extrae_event (PROGRAM, SERIAL);
-#else
-    double stamp;
-    START_COUNT_TIME;
 #endif
 
     if ( trsm_setup(check, m, n, b, lda, ldb, &A, &B, &Bchk) ) {
@@ -164,13 +161,16 @@ int main(int argc, char *argv[]) {
     /* do computation -- using all available threads */
 #if _EXTRAE_
     Extrae_event (PROGRAM, PARALLEL);
+#else
+    double stamp;
+    START_COUNT_TIME;
 #endif
 
 
     int i,j;
     for (i=size-1; i>=0; i--) {
         B[i] = B[i] / A[i * m + i];
-        #pragma omp parallel for private(j)
+        #pragma omp parallel for
         for (j = 0; j < i; j++) {
            B[j] = B[j] - B[i] * A[j * m + i];
         }
@@ -179,6 +179,8 @@ int main(int argc, char *argv[]) {
 #if _EXTRAE_
     Extrae_event (PROGRAM, END);
     Extrae_event (PROGRAM, SERIAL);
+#else
+    STOP_COUNT_TIME("");
 #endif
 
    if (size<=1000) {
@@ -207,8 +209,6 @@ int main(int argc, char *argv[]) {
 
 #if _EXTRAE_
     Extrae_event (PROGRAM, END);
-#else
-    STOP_COUNT_TIME("");
 #endif       
  
     trsm_shutdown(A, B, Bchk);
