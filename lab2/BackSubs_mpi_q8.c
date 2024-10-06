@@ -187,34 +187,116 @@ int main(int argc, char *argv[]) {
     if (myid == 0) START_COUNT_TIME;
 #endif
 
-    // Cyclic partitioning of rows
+    // Divide the rows of the matrix between processes using cyclic partitioning
     int i, j;
 
     // Backward substitution loop from the last row to the first
     for (i = size - 1; i >= 0; i--) {
-        int owner = i % numprocs;  // Determine which process owns row i
+        int sender = i % numprocs;  // Determine which process owns row i
 
         // If this process owns row i
-        if (myid == owner) {
+        if (myid == sender) {
             // Perform the backward substitution for this row
             B[i] = B[i] / A[i * m + i];  // Solve for B[i]
             
-            // Send the computed value of B[i] to all processes
-            for (int p = 0; p < numprocs; p++) {
-                if (p != myid) {
-                    MPI_Send(&B[i], 1, MPI_DOUBLE, p, 0, MPI_COMM_WORLD);
+            // Send the computed value of B[i] to all processes that need it
+            for (int receiver = 0; receiver < numprocs; receiver++) {
+                if (receiver != myid) {
+                    MPI_Send(&B[i], 1, MPI_DOUBLE, receiver, 0, MPI_COMM_WORLD);
                 }
             }
+
+            for(j = myid; j < i; j+=numprocs) {
+                B[j] = B[j] - B[i] * A[j * m + i];
+            }
+
         } else {
             // If this process doesn't own row i, receive the value of B[i] from the owner
-            MPI_Recv(&B[i], 1, MPI_DOUBLE, owner, 0, MPI_COMM_WORLD, &status);
-        }
+            MPI_Recv(&B[i], 1, MPI_DOUBLE, sender, 0, MPI_COMM_WORLD, &status);
 
-        // Update the rows below i for this process (only rows assigned to this process)
-        for (j = myid; j < i; j += numprocs) {
-            B[j] = B[j] - B[i] * A[j * m + i];  // Subtract the contribution of B[i] from B[j]
+            // Update the rows below i for this process 
+            for (j = myid; j < i; j += numprocs) {
+                B[j] = B[j] - B[i] * A[j * m + i];  // Subtract the contribution of B[i] from B[j]
+            }
         }
     }
+
+    // // Define the block size
+    // int block_size = 1000;
+
+    // // Calculate the number of blocks
+    // int num_blocks = size / block_size;
+    // int i, j, auxblock;
+
+    // // Process all blocks of rows 
+    // for (int block_id = num_blocks; block_id >= 0; block_id--) {
+        
+    //     // Calculate the range of rows for this block
+    //     int mylinesinit = block_id * block_size;
+    //     int mylinesend = mylinesinit + block_size;
+    //     if (mylinesend > size) {
+    //         mylinesend = size;  // Ensure end index does not exceed size
+    //     }
+    //     int sender = block_id % numprocs;  // Determine the process that owns block_id
+
+    //     // The process assigned to this block computes backsubstitution for the rows in this block
+    //     if (sender == myid) {   
+    //         for (i = mylinesend - 1; i >= mylinesinit; i--) {
+    //             // Perform the backward substitution for this row
+    //             B[i] = B[i] / A[i * m + i];  
+
+    //             // Send the computed value of B[i] to all processes that need it
+    //             for (int receiver = 0; receiver < numprocs; receiver++) {
+    //                 if(receiver != myid) {
+    //                     MPI_Send(&B[i], 1, MPI_DOUBLE, receiver, 0, MPI_COMM_WORLD);
+    //                 }
+    //             }
+
+    //             //Update the remaining rows within the range of this blocks
+    //             #pragma omp parallel for  
+    //             for (j = mylinesinit; j < i; j++) {
+    //                 if (j < mylinesend) {
+    //                     B[j] = B[j] - B[i] * A[j * m + i];
+    //                 }
+    //             }
+
+    //             // Update the rows of the other blocks that belongs to this process
+    //             for (auxblock = block_id - 1; auxblock >= 0; auxblock-=numprocs) {
+
+    //                 // Calculate the range of rows for this block
+    //                 int auxlinesinit = auxblock * block_size;
+    //                 int auxlinesend = auxlinesinit + block_size;
+                    
+    //                 #pragma omp parallel for  
+    //                 for (j = auxlinesinit; j < auxlinesend; j++) {
+    //                     B[j] = B[j] - B[i] * A[j * m + i];
+    //                 }
+    //             }
+    //         }
+    //     } else{
+
+    //         //If the block is not assigned to this process, receive all the rows
+    //         for (i = mylinesend - 1; i >= mylinesinit; i--) {
+    //             MPI_Recv(&B[i], 1, MPI_DOUBLE, sender, 0, MPI_COMM_WORLD, &status);
+    //         }
+            
+    //         // Update the rows of the other blocks that belongs to this process
+    //         for (auxblock = block_id - 1; auxblock >= 0; auxblock-=1) {
+    //             if(auxblock % numprocs == myid){
+    //                 // Calculate the range of rows for this block
+    //                 int auxlinesinit = auxblock * block_size;
+    //                 int auxlinesend = auxlinesinit + block_size;
+                    
+    //                 #pragma omp parallel for  
+    //                 for (j = auxlinesinit; j < auxlinesend; j++) {
+    //                     B[j] = B[j] - B[i] * A[j * m + i];
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
+
+
 
  
 #if _EXTRAE_
