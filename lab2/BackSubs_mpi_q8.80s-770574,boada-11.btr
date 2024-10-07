@@ -1,6 +1,0 @@
-
-BackSubs_mpi_q8:770574 terminated with signal 11 at PC=5c00c5668005 SP=7ffcc5bfbd60.  Backtrace:
-/scratch/nas/1/sca1002/LABS/lab2/./BackSubs_mpi_q8(+0x2005)[0x5c00c5668005]
-/lib/x86_64-linux-gnu/libc.so.6(+0x29d90)[0x72c6b0429d90]
-/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x80)[0x72c6b0429e40]
-/scratch/nas/1/sca1002/LABS/lab2/./BackSubs_mpi_q8(+0x26d5)[0x5c00c56686d5]
