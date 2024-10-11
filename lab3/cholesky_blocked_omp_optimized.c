@@ -34,6 +34,8 @@
 
 #include "cholesky.h"
 
+#define USE_MANUAL
+
 void omp_potrf(type_t (*A)[ts]) {
 #pragma omp task
   {
