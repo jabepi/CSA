@@ -34,10 +34,8 @@
 
 #include "cholesky.h"
 
-#define USE_MANUAL
-
 void omp_potrf(type_t (*A)[ts]) {
-#pragma omp task
+#pragma omp task depend(inout:A[0:ts][0:ts])
   {
 #ifndef USE_MANUAL
     static const char L = 'L';
@@ -86,7 +84,7 @@ void omp_trsm(type_t (*A)[ts], type_t (*B)[ts]) {
 }
 
 void omp_syrk(type_t (*A)[ts], type_t (*B)[ts]) {
-#pragma omp task
+#pragma omp task depend(in:A[0:ts][0:ts]) depend(inout:B[0:ts][0:ts])
   {
 #ifndef USE_MANUAL
     syrk(CBLAS_MAT_ORDER, CBLAS_LO, CBLAS_NT, ts, ts, -1.0, (type_t*)A, ts, 1.0,
@@ -106,21 +104,20 @@ void omp_syrk(type_t (*A)[ts], type_t (*B)[ts]) {
 }
 
 void omp_gemm(type_t (*A)[ts], type_t (*B)[ts], type_t (*C)[ts]) {
-#pragma omp task
+#pragma omp task depend(in:A[0:ts][0:ts], B[0:ts][0:ts]) depend(inout:C[0:ts][0:ts])
   {
 #ifndef USE_MANUAL
     gemm(CBLAS_MAT_ORDER, CBLAS_NT, CBLAS_T, ts, ts, ts, -1.0, (type_t*)A, ts,
          (type_t*)B, ts, 1.0, (type_t*)C, ts);
 #else
-    for (int j = 0; j < ts; ++j) {
+  for (int j = 0; j < ts; ++j) {
+    for (int l = 0; l < ts; ++l) {
+      type_t B_lj = -B[l][j];
       for (int i__ = 0; i__ < ts; ++i__) {
-        type_t temp = C[j][i__];
-        for (int l = 0; l < ts; ++l) {
-          temp += -B[l][j] * A[l][i__];
-        }
-        C[j][i__] = temp;
+        C[j][i__] += B_lj * A[l][i__];
       }
     }
+  }
 #endif
   }
 }
@@ -130,13 +127,11 @@ void cholesky_blocked(const int nt, type_t* Ah[nt][nt]) {
 
     // Diagonal Block factorization
     omp_potrf((type_t(*)[ts])Ah[k][k]);
-#pragma omp taskwait
 
     // Triangular systems
     for (int i = k + 1; i < nt; i++) {
       omp_trsm((type_t(*)[ts])Ah[k][k], (type_t(*)[ts])Ah[k][i]);
     }
-#pragma omp taskwait
 
     // Update trailing matrix
     for (int i = k + 1; i < nt; i++) {
@@ -145,7 +140,6 @@ void cholesky_blocked(const int nt, type_t* Ah[nt][nt]) {
                  (type_t(*)[ts])Ah[j][i]);
       }
       omp_syrk((type_t(*)[ts])Ah[k][i], (type_t(*)[ts])Ah[i][i]);
-#pragma omp taskwait
     }
   }
 }
@@ -330,6 +324,11 @@ int main(int argc, char* argv[]) {
 #endif
   printf("  Performance (flops):  %f\n", flops);
   printf("  Execution time (secs): %f\n", time);
+#ifndef USE_MANUAL
+  printf( "  Number of mkl threads:  %d\n", mkl_get_max_threads());
+#else
+  printf( "  Number of omp threads:  %d\n", omp_get_max_threads());
+#endif
   printf("================================================== \n");
 
   // Free blocked matrix

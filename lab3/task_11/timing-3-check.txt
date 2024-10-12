@@ -1,0 +1,62 @@
+make: Entering directory '/scratch/nas/1/sca1011/CSA/lab3'
+rm -rf cholesky cholesky_seq cholesky_omp cholesky_blocked cholesky_blockseq cholesky_blockseq_omp cholesky_blocked_omp cholesky_blockseq_deps cholesky_blocked_deps *.o *.pe* *.po* *.o* *.e*
+make: Leaving directory '/scratch/nas/1/sca1011/CSA/lab3'
+make: Entering directory '/scratch/nas/1/sca1011/CSA/lab3'
+gcc -Wall -Wimplicit-function-declaration -O3 -std=c99 -march=native -DUSE_MKL -DUSE_DOUBLE -lmkl_core -lmkl_sequential -lmkl_rt -lm -I. -I/scratch/nas/1/Soft/intel_parallel_studio_xe/mkl/include -L. -L/scratch/nas/1/Soft/intel_parallel_studio_xe/mkl/lib/intel64 -Wl,-rpath=/scratch/nas/1/Soft/intel_parallel_studio_xe/mkl/lib/intel64 -fopenmp cholesky_blocked_deps.c -o cholesky_blocked_deps_mkl.o
+cholesky_blocked_deps.c: In function ‘check_factorization’:
+cholesky_blocked_deps.c:157:71: warning: unused variable ‘RI’ [-Wunused-variable]
+  157 |   char NORM = 'I', ALL = 'A', UP = 'U', LO = 'L', TR = 'T', NU = 'N', RI = 'R';
+      |                                                                       ^~
+cholesky_blocked_deps.c:157:61: warning: unused variable ‘NU’ [-Wunused-variable]
+  157 |   char NORM = 'I', ALL = 'A', UP = 'U', LO = 'L', TR = 'T', NU = 'N', RI = 'R';
+      |                                                             ^~
+cholesky_blocked_deps.c:157:51: warning: unused variable ‘TR’ [-Wunused-variable]
+  157 |   char NORM = 'I', ALL = 'A', UP = 'U', LO = 'L', TR = 'T', NU = 'N', RI = 'R';
+      |                                                   ^~
+cholesky_blocked_deps.c: In function ‘main’:
+cholesky_blocked_deps.c:331:45: warning: implicit declaration of function ‘omp_get_max_threads’; did you mean ‘mkl_get_max_threads’? [-Wimplicit-function-declaration]
+  331 |   printf( "  Number of omp threads:  %d\n", omp_get_max_threads());
+      |                                             ^~~~~~~~~~~~~~~~~~~
+      |                                             mkl_get_max_threads
+cholesky_blocked_deps.c:251:9: warning: unused variable ‘result’ [-Wunused-variable]
+  251 |   char* result[3] = {"n/a", "sucessful", "UNSUCCESSFUL"};
+      |         ^~~~~~
+make: Leaving directory '/scratch/nas/1/sca1011/CSA/lab3'
+make: Entering directory '/scratch/nas/1/sca1011/CSA/lab3'
+gcc -Wall -Wimplicit-function-declaration -O3 -std=c99 -march=native -DUSE_MKL -DUSE_DOUBLE -lmkl_core -lmkl_sequential -lmkl_rt -lm -I. -I/scratch/nas/1/Soft/intel_parallel_studio_xe/mkl/include -L. -L/scratch/nas/1/Soft/intel_parallel_studio_xe/mkl/lib/intel64 -Wl,-rpath=/scratch/nas/1/Soft/intel_parallel_studio_xe/mkl/lib/intel64 -DUSE_MANUAL -fopenmp cholesky_blocked_deps.c -o cholesky_blocked_deps.o
+cholesky_blocked_deps.c: In function ‘check_factorization’:
+cholesky_blocked_deps.c:157:71: warning: unused variable ‘RI’ [-Wunused-variable]
+  157 |   char NORM = 'I', ALL = 'A', UP = 'U', LO = 'L', TR = 'T', NU = 'N', RI = 'R';
+      |                                                                       ^~
+cholesky_blocked_deps.c:157:61: warning: unused variable ‘NU’ [-Wunused-variable]
+  157 |   char NORM = 'I', ALL = 'A', UP = 'U', LO = 'L', TR = 'T', NU = 'N', RI = 'R';
+      |                                                             ^~
+cholesky_blocked_deps.c:157:51: warning: unused variable ‘TR’ [-Wunused-variable]
+  157 |   char NORM = 'I', ALL = 'A', UP = 'U', LO = 'L', TR = 'T', NU = 'N', RI = 'R';
+      |                                                   ^~
+cholesky_blocked_deps.c: In function ‘main’:
+cholesky_blocked_deps.c:251:9: warning: unused variable ‘result’ [-Wunused-variable]
+  251 |   char* result[3] = {"n/a", "sucessful", "UNSUCCESSFUL"};
+      |         ^~~~~~
+make: Leaving directory '/scratch/nas/1/sca1011/CSA/lab3'
+==================== RESULTS ===================== 
+  Benchmark: Cholesky (Tasks)
+  Elements type: double
+  Performance (flops):  44946862080.000000
+  Execution time (secs): 0.509635
+  Number of omp threads:  20
+================================================== 
+
+
+
+
+
+
+
+==================== RESULTS ===================== 
+  Benchmark: Cholesky (Tasks)
+  Elements type: double
+  Performance (flops):  325395054592.000000
+  Execution time (secs): 0.070396
+  Number of mkl threads:  1
+================================================== 

@@ -34,9 +34,9 @@
 
 #include "cholesky.h"
 
-#define USE_MANUAL
-
 void omp_potrf(type_t (*A)[ts]) {
+#pragma omp task depend(inout:A[0:ts][0:ts])
+  {
 #ifndef USE_MANUAL
     static const char L = 'L';
     int info;
@@ -56,9 +56,12 @@ void omp_potrf(type_t (*A)[ts]) {
       }
     }
 #endif
+  }
 }
 
 void omp_trsm(type_t (*A)[ts], type_t (*B)[ts]) {
+#pragma omp task depend(in : A[ : ts * ts]) depend(inout : B[ : ts * ts])
+  {
 #ifndef USE_MANUAL
     trsm(CBLAS_MAT_ORDER, CBLAS_RI, CBLAS_LO, CBLAS_T, CBLAS_NU, ts, ts, 1.0,
          (type_t*)A, ts, (type_t*)B, ts);
@@ -77,9 +80,12 @@ void omp_trsm(type_t (*A)[ts], type_t (*B)[ts]) {
       }
     }
 #endif
+  }
 }
 
 void omp_syrk(type_t (*A)[ts], type_t (*B)[ts]) {
+#pragma omp task depend(in:A[0:ts][0:ts]) depend(inout:B[0:ts][0:ts])
+  {
 #ifndef USE_MANUAL
     syrk(CBLAS_MAT_ORDER, CBLAS_LO, CBLAS_NT, ts, ts, -1.0, (type_t*)A, ts, 1.0,
          (type_t*)B, ts);
@@ -94,9 +100,12 @@ void omp_syrk(type_t (*A)[ts], type_t (*B)[ts]) {
       }
     }
 #endif
+  }
 }
 
 void omp_gemm(type_t (*A)[ts], type_t (*B)[ts], type_t (*C)[ts]) {
+#pragma omp task depend(in:A[0:ts][0:ts], B[0:ts][0:ts]) depend(inout:C[0:ts][0:ts])
+  {
 #ifndef USE_MANUAL
     gemm(CBLAS_MAT_ORDER, CBLAS_NT, CBLAS_T, ts, ts, ts, -1.0, (type_t*)A, ts,
          (type_t*)B, ts, 1.0, (type_t*)C, ts);
@@ -111,35 +120,27 @@ void omp_gemm(type_t (*A)[ts], type_t (*B)[ts], type_t (*C)[ts]) {
       }
     }
 #endif
+  }
 }
 
 void cholesky_blocked(const int nt, type_t* Ah[nt][nt]) {
   for (int k = 0; k < nt; k++) {
 
     // Diagonal Block factorization
-#pragma omp task depend(inout: Ah[k][k])
-    {
-      omp_potrf((type_t(*)[ts])Ah[k][k]);
-    }
+    omp_potrf((type_t(*)[ts])Ah[k][k]);
 
     // Triangular systems
     for (int i = k + 1; i < nt; i++) {
-#pragma omp task depend(in: Ah[k][k]) depend(out: Ah[k][i])
-      {
       omp_trsm((type_t(*)[ts])Ah[k][k], (type_t(*)[ts])Ah[k][i]);
-      }
     }
 
     // Update trailing matrix
-#pragma omp task depend(in: Ah[k][k+1:nt-k-1]) depend(out: Ah[k+1:nt-k-1][k+1:nt-k-1])
-    {
     for (int i = k + 1; i < nt; i++) {
       for (int j = k + 1; j < i; j++) {
         omp_gemm((type_t(*)[ts])Ah[k][i], (type_t(*)[ts])Ah[k][j],
                  (type_t(*)[ts])Ah[j][i]);
       }
       omp_syrk((type_t(*)[ts])Ah[k][i], (type_t(*)[ts])Ah[i][i]);
-    }
     }
   }
 }
@@ -324,6 +325,11 @@ int main(int argc, char* argv[]) {
 #endif
   printf("  Performance (flops):  %f\n", flops);
   printf("  Execution time (secs): %f\n", time);
+#ifndef USE_MANUAL
+  printf( "  Number of mkl threads:  %d\n", mkl_get_max_threads());
+#else
+  printf( "  Number of omp threads:  %d\n", omp_get_max_threads());
+#endif
   printf("================================================== \n");
 
   // Free blocked matrix

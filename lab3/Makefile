@@ -31,14 +31,20 @@ cholesky_blockseq: cholesky_blocked.c
 cholesky_blockseq_omp: cholesky_blocked_omp.c
 	$(CC) $(CFLAGS) $(SEQ) $(OPENMP) $< -o $@
 
+cholesky_blocked_deps: cholesky_blocked_deps.c
+	$(CC) $(CFLAGS) $(SEQ) $(OPENMP) $< -o $@.o
+
+cholesky_blocked_deps_optimized: cholesky_blocked_deps_optimized.c
+	$(CC) $(CFLAGS) $(SEQ) $(OPENMP) $< -o $@.o
+
+cholesky_blocked_deps_mkl: cholesky_blocked_deps.c
+	$(CC) $(CFLAGS) $(OPENMP) $< -o $@.o
+
 cholesky_blocked_omp: cholesky_blocked_omp.c
 	$(CC) $(CFLAGS) $(OPENMP) $< -o $@
 
 cholesky_blockseq_deps: cholesky_blocked_deps.c
 	$(CC) $(CFLAGS) $(SEQ) $(OPENMP) $< -o $@
-
-cholesky_blocked_deps: cholesky_blocked_deps.c
-	$(CC) $(CFLAGS) $(OPENMP) $< -o $@
 
 clean:
 	rm -rf $(TARGETS) *.o *.pe* *.po* *.o* *.e*
