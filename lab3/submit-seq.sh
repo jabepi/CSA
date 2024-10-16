@@ -1,14 +1,10 @@
-#!/bin/bash
 
-#SBATCH --job-name=submit-seq.sbatch
-#SBATCH -D .
-#SBATCH --output=submit-seq.sbatch.o%j
-#SBATCH --error=submit-seq.sbatch.e%j
-
-export PROG=BackSubs
+export PROG=cholesky
 make $PROG
 
-export size=10000
+for size in 1024 2048 4096; do
+    echo "Running with size $size"
+    sbatch -W --ntasks=1 --wrap=" srun ./$PROG $size"
+    wait
+done
 
-
-/usr/bin/time -o ${PROG}_time.txt ./$PROG $size

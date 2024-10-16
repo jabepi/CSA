@@ -34,6 +34,8 @@
 
 #include "cholesky.h"
 
+// #define USE_MANUAL 0
+
 void omp_potrf(type_t (*matrix),int N)
 {
    type_t (*A)[N]=matrix;
