@@ -1,0 +1,18 @@
+cholesky_blocked
+==================== RESULTS ===================== 
+  Benchmark: Cholesky (Blocked)
+  Elements type: double
+  Performance (flops):  14102589440.000000
+  Execution time (secs): 0.774515
+================================================== 
+0.98user 0.08system 0:01.11elapsed 96%CPU (0avgtext+0avgdata 184640maxresident)k
+40inputs+8outputs (0major+42240minor)pagefaults 0swaps
+cholesky_blockseq
+==================== RESULTS ===================== 
+  Benchmark: Cholesky (Blocked)
+  Elements type: double
+  Performance (flops):  8986513408.000000
+  Execution time (secs): 1.215451
+================================================== 
+1.43user 0.07system 0:01.54elapsed 98%CPU (0avgtext+0avgdata 180800maxresident)k
+72inputs+8outputs (1major+42103minor)pagefaults 0swaps

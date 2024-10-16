@@ -34,14 +34,9 @@
 
 #include "cholesky.h"
 
-
-#define USE_MANUAL 0
-
-//A in the position 
-void omp_potrf(type_t (*A)[ts])
-{
-#pragma omp task   
-{
+void omp_potrf(type_t (*A)[ts]) {
+#pragma omp task depend(inout:A[0:ts][0:ts])
+  {
 #ifndef USE_MANUAL
     static const char L = 'L';
     int info;
@@ -89,7 +84,7 @@ void omp_trsm(type_t (*A)[ts], type_t (*B)[ts]) {
 }
 
 void omp_syrk(type_t (*A)[ts], type_t (*B)[ts]) {
-#pragma omp task
+#pragma omp task depend(in:A[0:ts][0:ts]) depend(inout:B[0:ts][0:ts])
   {
 #ifndef USE_MANUAL
     syrk(CBLAS_MAT_ORDER, CBLAS_LO, CBLAS_NT, ts, ts, -1.0, (type_t*)A, ts, 1.0,
@@ -109,7 +104,7 @@ void omp_syrk(type_t (*A)[ts], type_t (*B)[ts]) {
 }
 
 void omp_gemm(type_t (*A)[ts], type_t (*B)[ts], type_t (*C)[ts]) {
-#pragma omp task
+#pragma omp task depend(in:A[0:ts][0:ts], B[0:ts][0:ts]) depend(inout:C[0:ts][0:ts])
   {
 #ifndef USE_MANUAL
     gemm(CBLAS_MAT_ORDER, CBLAS_NT, CBLAS_T, ts, ts, ts, -1.0, (type_t*)A, ts,
@@ -128,20 +123,16 @@ void omp_gemm(type_t (*A)[ts], type_t (*B)[ts], type_t (*C)[ts]) {
   }
 }
 
-void cholesky_blocked(const int nt, type_t* Ah[nt][nt])
-{
-   // Create one task for each tile
-   for (int k = 0; k < nt; k++) {
+void cholesky_blocked(const int nt, type_t* Ah[nt][nt]) {
+  for (int k = 0; k < nt; k++) {
 
-      // OMP_POTRT on the tile k,k 
-      omp_potrf( (type_t (*)[ts])Ah[k][k] );
-      #pragma omp taskwait
+    // Diagonal Block factorization
+    omp_potrf((type_t(*)[ts])Ah[k][k]);
 
     // Triangular systems
     for (int i = k + 1; i < nt; i++) {
       omp_trsm((type_t(*)[ts])Ah[k][k], (type_t(*)[ts])Ah[k][i]);
     }
-#pragma omp taskwait
 
     // Update trailing matrix
     for (int i = k + 1; i < nt; i++) {
@@ -149,23 +140,9 @@ void cholesky_blocked(const int nt, type_t* Ah[nt][nt])
         omp_gemm((type_t(*)[ts])Ah[k][i], (type_t(*)[ts])Ah[k][j],
                  (type_t(*)[ts])Ah[j][i]);
       }
-      #pragma omp taskwait
-
-      // Update trailing matrix
-      for (int i = k + 1; i < nt; i++) {
-
-         // it 3 does not enter 
-         for (int j = k + 1; j < i; j++) {
-            omp_gemm( (type_t (*)[ts])Ah[k][i],
-                      (type_t (*)[ts])Ah[k][j],
-                      (type_t (*)[ts])Ah[j][i] );
-         }
-         omp_syrk( (type_t (*)[ts])Ah[k][i],
-                   (type_t (*)[ts])Ah[i][i] );
-         #pragma omp taskwait
-      }
-
-   }
+      omp_syrk((type_t(*)[ts])Ah[k][i], (type_t(*)[ts])Ah[i][i]);
+    }
+  }
 }
 
 // Robust Check the factorization of the matrix A2
@@ -268,23 +245,20 @@ void initialize_matrix(const int n, type_t* matrix) {
   }
 }
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
+  char* result[3] = {"n/a", "sucessful", "UNSUCCESSFUL"};
 
-   char *result[3] = {"n/a","sucessful","UNSUCCESSFUL"};
-
-   if ( argc < 3 ) {
-      printf( stderr, "USAGE:\t%s <matrix size> [<check>]\n", argv[0] );
-      exit( -1 );
-   }
-
-   const int  n = atoi(argv[1]); // matrix size
-   int check    = argc > 2 ? atoi(argv[2]) : 1; // check result?
-   const int nt = n / ts; // number of tiles
-   if ( n % ts != 0 ) {
-      fprintf( stderr, "ERROR:\t<matrix size> is not multiple of <block size>\n" );
-      exit( -1 );
-   }
+  if (argc < 3) {
+    fprintf(stderr, "USAGE:\t%s <matrix size> [<check>]\n", argv[0]);
+    exit(-1);
+  }
+  const int n = atoi(argv[1]);               // matrix size
+  int check = argc > 2 ? atoi(argv[2]) : 1;  // check result?
+  const int nt = n / ts;                     // number of tiles
+  if (n % ts != 0) {
+    fprintf(stderr, "ERROR:\t<matrix size> is not multiple of <block size>\n");
+    exit(-1);
+  }
 
   // Allocate matrix
   type_t* const matrix = (type_t*)malloc(n * n * sizeof(type_t));
@@ -312,20 +286,13 @@ int main(int argc, char* argv[])
     }
   }
 
-
-
 #ifdef VERBOSE
   printf("Executing ...\n");
 #endif
 
-   convert_to_blocks(nt, n, (type_t(*)[n]) matrix, Ah);
- 
-   float secs1, secs2;
-#pragma omp parallel 
-#pragma omp single 
-{
-   secs1 = get_time();
-   cholesky_blocked(nt, (type_t* (*)[nt]) Ah);
+  convert_to_blocks(nt, n, (type_t(*)[n])matrix, Ah);
+
+  float secs1, secs2;
 
 #pragma omp parallel
 #pragma omp single
@@ -358,6 +325,11 @@ int main(int argc, char* argv[])
 #endif
   printf("  Performance (flops):  %f\n", flops);
   printf("  Execution time (secs): %f\n", time);
+#ifndef USE_MANUAL
+  printf( "  Number of mkl threads:  %d\n", mkl_get_max_threads());
+#else
+  printf( "  Number of omp threads:  %d\n", omp_get_max_threads());
+#endif
   printf("================================================== \n");
 
   // Free blocked matrix

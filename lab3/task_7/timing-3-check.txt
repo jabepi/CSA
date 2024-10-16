@@ -1,0 +1,46 @@
+cholesky_blocked omp NON optimized
+==================================================
+Checking the Cholesky Factorization 
+
+-- Factorization is CORRECT ! 
+
+==================== RESULTS ===================== 
+  Benchmark: Cholesky (Tasks)
+  Elements type: double
+  Performance (flops):  5737945088.000000
+  Execution time (secs): 1.903585
+================================================== 
+39.45user 0.39system 0:03.63elapsed 1095%CPU (0avgtext+0avgdata 487040maxresident)k
+0inputs+8outputs (0major+167826minor)pagefaults 0swaps
+cholesky_blocked omp optimized
+==================================================
+Checking the Cholesky Factorization 
+
+-- Factorization is CORRECT ! 
+
+==================== RESULTS ===================== 
+  Benchmark: Cholesky (Tasks)
+  Elements type: double
+  Performance (flops):  3924780646400.000000
+  Execution time (secs): 0.002783
+================================================== 
+14.48user 0.33system 0:06.04elapsed 245%CPU (0avgtext+0avgdata 488640maxresident)k
+0inputs+16outputs (0major+166837minor)pagefaults 0swaps
+cholesky_blocked omp NON optimized
+==================== RESULTS ===================== 
+  Benchmark: Cholesky (Tasks)
+  Elements type: double
+  Performance (flops):  6074701824.000000
+  Execution time (secs): 1.798058
+================================================== 
+36.19user 0.15system 0:02.11elapsed 1717%CPU (0avgtext+0avgdata 180160maxresident)k
+0inputs+8outputs (0major+70053minor)pagefaults 0swaps
+cholesky_blocked omp optimized
+==================== RESULTS ===================== 
+  Benchmark: Cholesky (Tasks)
+  Elements type: double
+  Performance (flops):  4270014332928.000000
+  Execution time (secs): 0.002558
+================================================== 
+13.24user 0.11system 0:04.60elapsed 290%CPU (0avgtext+0avgdata 182080maxresident)k
+0inputs+16outputs (0major+42445minor)pagefaults 0swaps

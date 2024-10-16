@@ -250,11 +250,13 @@ int main(int argc, char* argv[])
       fprintf( stderr, "USAGE:\t%s <matrix size> [<check>]\n", argv[0] );
       exit( -1 );
    }
+
    const int  n = atoi(argv[1]); // matrix size
    int check    = argc > 2 ? atoi(argv[2]) : 1; // check result?
    const int nt = n / ts; // number of tiles
    if ( n % ts != 0 ) {
-      fprintf( stderr, "ERROR:\t<matrix size> is not multiple of <block size>\n" );
+      fprintf(stderr,
+              "ERROR:\t<matrix size> is not multiple of <block size>\n");
       exit( -1 );
    }
 
