@@ -1,0 +1,23 @@
+cholesky_blocked_omp.c: In function ‘check_factorization’:
+cholesky_blocked_omp.c:174:72: warning: unused variable ‘RI’ [-Wunused-variable]
+  174 |    char NORM = 'I', ALL = 'A', UP = 'U', LO = 'L', TR = 'T', NU = 'N', RI = 'R';
+      |                                                                        ^~
+cholesky_blocked_omp.c:174:62: warning: unused variable ‘NU’ [-Wunused-variable]
+  174 |    char NORM = 'I', ALL = 'A', UP = 'U', LO = 'L', TR = 'T', NU = 'N', RI = 'R';
+      |                                                              ^~
+cholesky_blocked_omp.c:174:52: warning: unused variable ‘TR’ [-Wunused-variable]
+  174 |    char NORM = 'I', ALL = 'A', UP = 'U', LO = 'L', TR = 'T', NU = 'N', RI = 'R';
+      |                                                    ^~
+cholesky_blocked_omp.c: In function ‘main’:
+cholesky_blocked_omp.c:273:15: warning: passing argument 1 of ‘printf’ from incompatible pointer type [-Wincompatible-pointer-types]
+  273 |       printf( stderr, "USAGE:\t%s <matrix size> [<check>]\n", argv[0] );
+      |               ^~~~~~
+      |               |
+      |               FILE *
+In file included from cholesky_blocked_omp.c:28:
+/usr/include/stdio.h:356:43: note: expected ‘const char * restrict’ but argument is of type ‘FILE *’
+  356 | extern int printf (const char *__restrict __format, ...);
+      |                    ~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~
+cholesky_blocked_omp.c:270:10: warning: unused variable ‘result’ [-Wunused-variable]
+  270 |    char *result[3] = {"n/a","sucessful","UNSUCCESSFUL"};
+      |          ^~~~~~

@@ -1,0 +1,2 @@
+USAGE:	/scratch/nas/1/sca1002/LABS/lab3/./cholesky_blocked_omp <matrix size> [<check>]
+srun: error: boada-11: task 0: Exited with exit code 255

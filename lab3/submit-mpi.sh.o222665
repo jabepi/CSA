@@ -1,0 +1,3 @@
+gcc -Wall -Wimplicit-function-declaration -O3 -std=c99 -march=native -DUSE_MKL -DUSE_DOUBLE -lmkl_core -lmkl_sequential -lmkl_rt -lm -I. -I/scratch/nas/1/Soft/intel_parallel_studio_xe/mkl/include -L. -L/scratch/nas/1/Soft/intel_parallel_studio_xe/mkl/lib/intel64 -Wl,-rpath=/scratch/nas/1/Soft/intel_parallel_studio_xe/mkl/lib/intel64 -fopenmp cholesky_blocked_omp.c -o cholesky_blocked_omp
+Running with size  using 1 threads
+hola

@@ -1,0 +1,1 @@
+USAGE:	./cholesky_blocked_omp <matrix size> [<check>]

@@ -1,0 +1,6 @@
+==================== RESULTS ===================== 
+  Benchmark: Cholesky (Tasks)
+  Elements type: double
+  Performance (flops):  2984709632.000000
+  Execution time (secs): 7.674613
+================================================== 

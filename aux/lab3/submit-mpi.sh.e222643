@@ -1,0 +1,33 @@
+cholesky_blocked_omp.c: In function ‘check_factorization’:
+cholesky_blocked_omp.c:167:72: warning: unused variable ‘RI’ [-Wunused-variable]
+  167 |    char NORM = 'I', ALL = 'A', UP = 'U', LO = 'L', TR = 'T', NU = 'N', RI = 'R';
+      |                                                                        ^~
+cholesky_blocked_omp.c:167:62: warning: unused variable ‘NU’ [-Wunused-variable]
+  167 |    char NORM = 'I', ALL = 'A', UP = 'U', LO = 'L', TR = 'T', NU = 'N', RI = 'R';
+      |                                                              ^~
+cholesky_blocked_omp.c:167:52: warning: unused variable ‘TR’ [-Wunused-variable]
+  167 |    char NORM = 'I', ALL = 'A', UP = 'U', LO = 'L', TR = 'T', NU = 'N', RI = 'R';
+      |                                                    ^~
+cholesky_blocked_omp.c: In function ‘main’:
+cholesky_blocked_omp.c:262:10: warning: unused variable ‘result’ [-Wunused-variable]
+  262 |    char *result[3] = {"n/a","sucessful","UNSUCCESSFUL"};
+      |          ^~~~~~
+/usr/bin/ld: /tmp/ccE0TQbB.o: in function `omp_potrf._omp_fn.0':
+cholesky_blocked_omp.c:(.text+0x32): undefined reference to `dpotrf'
+/usr/bin/ld: /tmp/ccE0TQbB.o: in function `omp_trsm._omp_fn.0':
+cholesky_blocked_omp.c:(.text+0x8c): undefined reference to `cblas_dtrsm'
+/usr/bin/ld: /tmp/ccE0TQbB.o: in function `omp_syrk._omp_fn.0':
+cholesky_blocked_omp.c:(.text+0xdd): undefined reference to `cblas_dsyrk'
+/usr/bin/ld: /tmp/ccE0TQbB.o: in function `omp_gemm._omp_fn.0':
+cholesky_blocked_omp.c:(.text+0x137): undefined reference to `cblas_dgemm'
+/usr/bin/ld: /tmp/ccE0TQbB.o: in function `initialize_matrix':
+cholesky_blocked_omp.c:(.text+0x961): undefined reference to `dlarnv'
+/usr/bin/ld: /tmp/ccE0TQbB.o: in function `main':
+cholesky_blocked_omp.c:(.text.startup+0x623): undefined reference to `dlacpy'
+/usr/bin/ld: cholesky_blocked_omp.c:(.text.startup+0x64a): undefined reference to `dlacpy'
+/usr/bin/ld: cholesky_blocked_omp.c:(.text.startup+0x66a): undefined reference to `dlacpy'
+/usr/bin/ld: cholesky_blocked_omp.c:(.text.startup+0x6a6): undefined reference to `cblas_dtrmm'
+/usr/bin/ld: cholesky_blocked_omp.c:(.text.startup+0x713): undefined reference to `dlange'
+/usr/bin/ld: cholesky_blocked_omp.c:(.text.startup+0x737): undefined reference to `dlange'
+collect2: error: ld returned 1 exit status
+make: *** [Makefile:35: cholesky_blocked_omp] Error 1

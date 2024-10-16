@@ -1,0 +1,15 @@
+cholesky_blocked_omp.c: In function ‘check_factorization’:
+cholesky_blocked_omp.c:174:72: warning: unused variable ‘RI’ [-Wunused-variable]
+  174 |    char NORM = 'I', ALL = 'A', UP = 'U', LO = 'L', TR = 'T', NU = 'N', RI = 'R';
+      |                                                                        ^~
+cholesky_blocked_omp.c:174:62: warning: unused variable ‘NU’ [-Wunused-variable]
+  174 |    char NORM = 'I', ALL = 'A', UP = 'U', LO = 'L', TR = 'T', NU = 'N', RI = 'R';
+      |                                                              ^~
+cholesky_blocked_omp.c:174:52: warning: unused variable ‘TR’ [-Wunused-variable]
+  174 |    char NORM = 'I', ALL = 'A', UP = 'U', LO = 'L', TR = 'T', NU = 'N', RI = 'R';
+      |                                                    ^~
+cholesky_blocked_omp.c: In function ‘main’:
+cholesky_blocked_omp.c:271:10: warning: unused variable ‘result’ [-Wunused-variable]
+  271 |    char *result[3] = {"n/a","sucessful","UNSUCCESSFUL"};
+      |          ^~~~~~
+USAGE:	./cholesky_blocked_omp <matrix size> [<check>]
