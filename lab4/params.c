@@ -7,7 +7,7 @@
 
 static void print_usage()
 {
-    fprintf(stderr, 
+    fprintf(stderr,
             "cgp3d\n"
             "\t-h: print this message\n"
             "\t-n: mesh size (100)\n"

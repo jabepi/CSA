@@ -83,7 +83,7 @@ double pcg(int n,
         is_converged = (rho/rho0 < rtol2);
     }
 
-    printf("%d steps, residual reduction %g (%s tol %g); time %g\n",
+    printf("%d steps, residual reduction %g (%s tol %g); time %g seconds\n",
            step, sqrt(rho/rho0), is_converged ? "<=" : ">", rtol, toc(0));
 
     free(p);

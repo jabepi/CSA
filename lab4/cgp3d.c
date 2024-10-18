@@ -358,7 +358,11 @@ int main(int argc, char** argv)
     memset(r, 0, N*sizeof(double));
 
     /* Set up right hand side */
-    setup_rhs1(n,b);
+#ifdef USE_RHS0
+    setup_rhs0(n, b);
+#else
+    setup_rhs1(n, b);
+#endif
 
     /* Solve via PCG */
     int maxit   = params.maxit;
@@ -367,12 +371,12 @@ int main(int argc, char** argv)
     if (params.ptype == PC_SCHWARZ) {
         double* scratch = malloc(N*sizeof(double));
         pc_schwarz_p3d_t pcdata = {n, params.overlap, params.omega, scratch};
-        pcg(N, pc_schwarz_poisson3d, &pcdata, mul_poisson3d, &n, x, b, 
+        pcg(N, pc_schwarz_poisson3d, &pcdata, mul_poisson3d, &n, x, b,
             maxit, rtol);
         free(scratch);
     } else if (params.ptype == PC_SSOR) {
         pc_ssor_p3d_t ssor_data = {n, params.omega};
-        pcg(N, pc_ssor_poisson3d, &ssor_data, mul_poisson3d, &n, x, b, 
+        pcg(N, pc_ssor_poisson3d, &ssor_data, mul_poisson3d, &n, x, b,
             maxit, rtol);
     } else {
         pcg(N, pc_identity, NULL, mul_poisson3d, &n, x, b, maxit, rtol);

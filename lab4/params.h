@@ -3,7 +3,7 @@
 
 /*@T
  * \section{Solver parameters}
- * 
+ *
  * The [[solve_param_t]] structure holds the parameters that
  * describe the simulation.  These parameters are filled in
  * by the [[get_params]] function.  Details of the parameters
@@ -14,7 +14,7 @@ enum {                /* Types of preconditioners available: */
     PC_SSOR = 2,      /* 2. SSOR                             */
     PC_SCHWARZ = 3    /* 3. Additive Schwarz                 */
 };
-    
+
 typedef struct solve_param_t {
     int    n;       /* Mesh size */
     int    maxit;   /* Maximum PCG iterations */
