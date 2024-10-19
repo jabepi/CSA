@@ -4,30 +4,254 @@
 #include <math.h>
 #include <assert.h>
 
+#include "timing.h"
 #include "pcg.h"
 #include "params.h"
+
+extern float time_in_poisson;
 
 /*@T
  * \section{3D Laplace operator}
  *
  * The 3D Laplacian looks like
  * \[
- *    (Ax)_{ijk} = h^{-2} 
+ *    (Ax)_{ijk} = h^{-2}
  *    \left( 6x_{ijk} - \sum_{q,r,s: |q-i|+|j-r|+|k-s|=1} x_{qrs} \right).
  * \]
  * The [[mul_poisson3d]] function applies the 3D Laplacian to an
  * $n \times n \times n$ mesh of $[0,1]^3$ ($N = n^3$, $h = 1/(n-1)$),
  * assuming Dirichlet boundary conditions.
  *@c*/
-void mul_poisson3d(int N, void* data, 
-                   double* restrict Ax, 
-                   double* restrict x)
+#ifdef USE_NO_BRANCH
+void mul_poisson3d(int N, void* data, double* restrict Ax, double* restrict x)
 {
+    tic(1);
     #define X(i,j,k) (x[((k)*n+(j))*n+(i)])
     #define AX(i,j,k) (Ax[((k)*n+(j))*n+(i)])
 
     int n = *(int*) data;
-    int inv_h2 = (n-1)*(n-1);
+    int inv_h2 = (n - 1) * (n - 1);
+
+    // Handle interior points where all neighbors are within bounds
+    for (int k = 1; k < n - 1; ++k) {
+        for (int j = 1; j < n - 1; ++j) {
+            for (int i = 1; i < n - 1; ++i) {
+                AX(i, j, k) = (6 * X(i, j, k)
+                                - X(i - 1, j, k) - X(i + 1, j, k)
+                                - X(i, j - 1, k) - X(i, j + 1, k)
+                                - X(i, j, k - 1) - X(i, j, k + 1)) * inv_h2;
+            }
+        }
+    }
+
+    // Handle boundary faces k = 0 and k = n - 1
+    for (int k = 0; k < n; k += n - 1) {
+        for (int j = 0; j < n; ++j) {
+            for (int i = 0; i < n; ++i) {
+                double xn = (i > 0)     ? X(i - 1, j, k) : 0;
+                double xs = (i < n - 1) ? X(i + 1, j, k) : 0;
+                double xe = (j > 0)     ? X(i, j - 1, k) : 0;
+                double xw = (j < n - 1) ? X(i, j + 1, k) : 0;
+                double xu = (k > 0)     ? X(i, j, k - 1) : 0;
+                double xd = (k < n - 1) ? X(i, j, k + 1) : 0;
+                AX(i, j, k) = (6 * X(i, j, k) - xn - xs - xe - xw - xu - xd) * inv_h2;
+            }
+        }
+    }
+
+    // Handle boundary faces j = 0 and j = n - 1
+    for (int k = 1; k < n - 1; ++k) {
+        for (int j = 0; j < n; j += n - 1) {
+            for (int i = 0; i < n; ++i) {
+                double xn = (i > 0)     ? X(i - 1, j, k) : 0;
+                double xs = (i < n - 1) ? X(i + 1, j, k) : 0;
+                double xu = X(i, j, k - 1);
+                double xd = X(i, j, k + 1);
+                double xe = (j > 0)     ? X(i, j - 1, k) : 0;
+                double xw = (j < n - 1) ? X(i, j + 1, k) : 0;
+                AX(i, j, k) = (6 * X(i, j, k) - xn - xs - xe - xw - xu - xd) * inv_h2;
+            }
+        }
+    }
+
+    // Handle boundary faces i = 0 and i = n - 1
+    for (int k = 1; k < n - 1; ++k) {
+        for (int j = 1; j < n - 1; ++j) {
+            for (int i = 0; i < n; i += n - 1) {
+                double xn = (i > 0)     ? X(i - 1, j, k) : 0;
+                double xs = (i < n - 1) ? X(i + 1, j, k) : 0;
+                double xe = X(i, j - 1, k);
+                double xw = X(i, j + 1, k);
+                double xu = X(i, j, k - 1);
+                double xd = X(i, j, k + 1);
+                AX(i, j, k) = (6 * X(i, j, k) - xn - xs - xe - xw - xu - xd) * inv_h2;
+            }
+        }
+    }
+
+    // Handle edges where two indices are at the boundary
+    // Edges along k-direction
+    for (int k = 1; k < n - 1; ++k) {
+        for (int ij = 0; ij < 4; ++ij) {
+            int i = (ij & 1) * (n - 1); // i = 0 or n - 1
+            int j = ((ij >> 1) & 1) * (n - 1); // j = 0 or n - 1
+            double xn = (i > 0)     ? X(i - 1, j, k) : 0;
+            double xs = (i < n - 1) ? X(i + 1, j, k) : 0;
+            double xe = (j > 0)     ? X(i, j - 1, k) : 0;
+            double xw = (j < n - 1) ? X(i, j + 1, k) : 0;
+            double xu = X(i, j, k - 1);
+            double xd = X(i, j, k + 1);
+            AX(i, j, k) = (6 * X(i, j, k) - xn - xs - xe - xw - xu - xd) * inv_h2;
+        }
+    }
+
+    // Edges along j-direction
+    for (int k = 0; k < n; k += n - 1) {
+        for (int i = 1; i < n - 1; ++i) {
+            for (int j = 0; j < n; j += n - 1) {
+                double xn = X(i - 1, j, k);
+                double xs = X(i + 1, j, k);
+                double xe = (j > 0)     ? X(i, j - 1, k) : 0;
+                double xw = (j < n - 1) ? X(i, j + 1, k) : 0;
+                double xu = (k > 0)     ? X(i, j, k - 1) : 0;
+                double xd = (k < n - 1) ? X(i, j, k + 1) : 0;
+                AX(i, j, k) = (6 * X(i, j, k) - xn - xs - xe - xw - xu - xd) * inv_h2;
+            }
+        }
+    }
+
+    // Edges along i-direction
+    for (int k = 0; k < n; k += n - 1) {
+        for (int j = 1; j < n - 1; ++j) {
+            for (int i = 0; i < n; i += n - 1) {
+                double xn = (i > 0)     ? X(i - 1, j, k) : 0;
+                double xs = (i < n - 1) ? X(i + 1, j, k) : 0;
+                double xe = X(i, j - 1, k);
+                double xw = X(i, j + 1, k);
+                double xu = (k > 0)     ? X(i, j, k - 1) : 0;
+                double xd = (k < n - 1) ? X(i, j, k + 1) : 0;
+                AX(i, j, k) = (6 * X(i, j, k) - xn - xs - xe - xw - xu - xd) * inv_h2;
+            }
+        }
+    }
+
+    // Handle corner points where all three indices are at the boundary
+    for (int k = 0; k < n; k += n - 1) {
+        for (int j = 0; j < n; j += n - 1) {
+            for (int i = 0; i < n; i += n - 1) {
+                double xn = (i > 0)     ? X(i - 1, j, k) : 0;
+                double xs = (i < n - 1) ? X(i + 1, j, k) : 0;
+                double xe = (j > 0)     ? X(i, j - 1, k) : 0;
+                double xw = (j < n - 1) ? X(i, j + 1, k) : 0;
+                double xu = (k > 0)     ? X(i, j, k - 1) : 0;
+                double xd = (k < n - 1) ? X(i, j, k + 1) : 0;
+                AX(i, j, k) = (6 * X(i, j, k) - xn - xs - xe - xw - xu - xd) * inv_h2;
+            }
+        }
+    }
+
+    #undef AX
+    #undef X
+    time_in_poisson += toc(1);
+}
+
+#elif defined(USE_LOOP_ORDER)
+void mul_poisson3d(int N, void* data, double* restrict Ax, double* restrict x)
+{
+    tic(1);
+    #define X(i,j,k) (x[((k)*n+(j))*n+(i)])
+    #define AX(i,j,k) (Ax[((k)*n+(j))*n+(i)])
+
+    int n = *(int*) data;
+    int inv_h2 = (n - 1) * (n - 1);
+#if defined(USE_JKI)
+    for (int k = 0; k < n; ++k) {
+        for (int i = 0; i < n; ++i) {
+            for (int j = 0; j < n; ++j) {
+#elif defined(USE_KIJ)
+    for (int k = 0; k < n; ++k) {
+        for (int i = 0; i < n; ++i) {
+            for (int j = 0; j < n; ++j) {
+#elif defined(USE_IKJ)
+    for (int i = 0; i < n; ++i) {
+        for (int k = 0; k < n; ++k) {
+            for (int j = 0; j < n; ++j) {
+#elif defined(USE_IJK)
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+            for (int k = 0; k < n; ++k) {
+#elif defined(USE_JIK)
+    for (int j = 0; j < n; ++j) {
+        for (int i = 0; i < n; ++i) {
+            for (int k = 0; k < n; ++k) {
+#else
+    for (int k = 0; k < n; ++k) {
+        for (int j = 0; j < n; ++j) {
+            for (int i = 0; i < n; ++i) {
+#endif
+                double xx = X(i,j,k);
+                double xn = (i > 0)   ? X(i-1,j,k) : 0;
+                double xs = (i < n-1) ? X(i+1,j,k) : 0;
+                double xe = (j > 0)   ? X(i,j-1,k) : 0;
+                double xw = (j < n-1) ? X(i,j+1,k) : 0;
+                double xu = (k > 0)   ? X(i,j,k-1) : 0;
+                double xd = (k < n-1) ? X(i,j,k+1) : 0;
+                AX(i,j,k) = (6*xx - xn - xs - xe - xw - xu - xd)*inv_h2;
+            }
+        }
+    }
+
+    #undef AX
+    #undef X
+    time_in_poisson += toc(1);
+}
+#elif defined(USE_PARTIAL_PREDICATION)
+void mul_poisson3d(int N, void* data, double* restrict Ax, double* restrict x)
+{
+    tic(1);
+    #define X(i,j,k) (x[((k)*n+(j))*n+(i)])
+    #define AX(i,j,k) (Ax[((k)*n+(j))*n+(i)])
+    int n = *(int*) data;
+    int inv_h2 = (n-1) * (n-1);
+    for (int k = 0; k < n; ++k) {
+        int k_gt_0 = k > 0;
+        int k_lt_n1 = k < n - 1;
+        int ku = k - k_gt_0;
+        int kd = k + k_lt_n1;
+        for (int j = 0; j < n; ++j) {
+            int j_gt_0 = j > 0;
+            int j_lt_n1 = j < n - 1;
+            int je = j - j_gt_0;
+            int jw = j + j_lt_n1;
+            for (int i = 0; i < n; ++i) {
+                int i_gt_0 = i > 0;
+                int i_lt_n1 = i < n - 1;
+                int in = i - i_gt_0;
+                int is = i + i_lt_n1;
+                double xx = X(i, j, k);
+                double xn = X(in, j, k) * i_gt_0;
+                double xs = X(is, j, k) * i_lt_n1;
+                double xe = X(i, je, k) * j_gt_0;
+                double xw = X(i, jw, k) * j_lt_n1;
+                double xu = X(i, j, ku) * k_gt_0;
+                double xd = X(i, j, kd) * k_lt_n1;
+                AX(i, j, k) = (6 * xx - xn - xs - xe - xw - xu - xd) * inv_h2;
+            }
+        }
+    }
+    #undef AX
+    #undef X
+    time_in_poisson += toc(1);
+}
+#else
+void mul_poisson3d(int N, void* data, double* restrict Ax, double* restrict x)
+{
+    tic(1);
+    #define X(i,j,k) (x[((k)*n+(j))*n+(i)])
+    #define AX(i,j,k) (Ax[((k)*n+(j))*n+(i)])
+
+    int n = *(int*) data;
+    int inv_h2 = (n-1) * (n-1);
     for (int k = 0; k < n; ++k) {
         for (int j = 0; j < n; ++j) {
             for (int i = 0; i < n; ++i) {
@@ -45,7 +269,9 @@ void mul_poisson3d(int N, void* data,
 
     #undef AX
     #undef X
+    time_in_poisson += toc(1);
 }
+#endif
 
 
 /*@T
