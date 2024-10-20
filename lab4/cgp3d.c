@@ -154,7 +154,6 @@ void mul_poisson3d(int N, void* data, double* restrict Ax, double* restrict x)
     #undef X
     time_in_poisson += toc(1);
 }
-
 #elif defined(USE_LOOP_ORDER)
 void mul_poisson3d(int N, void* data, double* restrict Ax, double* restrict x)
 {
@@ -241,6 +240,64 @@ void mul_poisson3d(int N, void* data, double* restrict Ax, double* restrict x)
     }
     #undef AX
     #undef X
+    time_in_poisson += toc(1);
+}
+#elif defined(USE_BLOCKING)
+void mul_poisson3d(int N, void* data, double* restrict Ax, double* restrict x)
+{
+    tic(1);
+    #define X(i,j,k) (x[((k)*n+(j))*n+(i)])
+    #define AX(i,j,k) (Ax[((k)*n+(j))*n+(i)])
+
+    int n = *(int*) data;
+    int inv_h2 = (n - 1) * (n - 1);
+
+    // Set default block sizes if not defined
+    #ifndef Bk
+    #define Bk 8
+    #endif
+
+    #ifndef Bj
+    #define Bj 8
+    #endif
+
+    #ifndef Bi
+    #define Bi 32
+    #endif
+
+    for (int kk = 0; kk < n; kk += Bk) {
+        for (int jj = 0; jj < n; jj += Bj) {
+            for (int ii = 0; ii < n; ii += Bi) {
+                int k_end = (kk + Bk < n) ? kk + Bk : n;
+                int j_end = (jj + Bj < n) ? jj + Bj : n;
+                int i_end = (ii + Bi < n) ? ii + Bi : n;
+
+                for (int k = kk; k < k_end; ++k) {
+                    for (int j = jj; j < j_end; ++j) {
+                        for (int i = ii; i < i_end; ++i) {
+                            double xx = X(i, j, k);
+                            double xn = (i > 0)     ? X(i - 1, j, k) : 0;
+                            double xs = (i < n - 1) ? X(i + 1, j, k) : 0;
+                            double xe = (j > 0)     ? X(i, j - 1, k) : 0;
+                            double xw = (j < n - 1) ? X(i, j + 1, k) : 0;
+                            double xu = (k > 0)     ? X(i, j, k - 1) : 0;
+                            double xd = (k < n - 1) ? X(i, j, k + 1) : 0;
+                            AX(i, j, k) = (6 * xx - xn - xs - xe - xw - xu - xd) * inv_h2;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #undef AX
+    #undef X
+
+    // Optionally undefine block sizes to avoid conflicts elsewhere
+    #undef Bk
+    #undef Bj
+    #undef Bi
+
     time_in_poisson += toc(1);
 }
 #else
