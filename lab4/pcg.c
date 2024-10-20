@@ -6,6 +6,8 @@
 #include "timing.h"
 #include "pcg.h"
 
+float time_in_poisson = 0;
+float time_in_SSOR = 0;
 
 double dot(int n, const double* x, const double* y)
 {
@@ -39,13 +41,8 @@ double dot(int n, const double* x, const double* y)
  * may not be the norm anyone actually cares about... but it surely is
  * cheap to compute.
  *@c*/
-double pcg(int n,
-           mul_fun_t Mfun, void* Mdata,
-           mul_fun_t Afun, void* Adata,
-           double* restrict x,
-           const double* restrict b,
-           int maxit,
-           double rtol)
+double pcg(int n, mul_fun_t Mfun, void* Mdata, mul_fun_t Afun, void* Adata,
+           double* restrict x, const double* restrict b, int maxit, double rtol)
 {
     double* r = malloc(n*sizeof(double));
     double* z = malloc(n*sizeof(double));
@@ -83,8 +80,10 @@ double pcg(int n,
         is_converged = (rho/rho0 < rtol2);
     }
 
-    printf("%d steps, residual reduction %g (%s tol %g); time %g\n",
-           step, sqrt(rho/rho0), is_converged ? "<=" : ">", rtol, toc(0));
+    printf("%d steps, residual reduction %g (%s tol %g); time %g seconds.\n " \
+           "Time in Poisson: %g seconds\nTime in SSOR: %g seconds\n", step,
+            sqrt(rho/rho0), is_converged ? "<=" : ">", rtol, toc(0),
+            time_in_poisson, time_in_SSOR);
 
     free(p);
     free(q);
