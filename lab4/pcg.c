@@ -7,6 +7,7 @@
 #include "pcg.h"
 
 float time_in_poisson = 0;
+float time_in_SSOR = 0;
 
 double dot(int n, const double* x, const double* y)
 {
@@ -79,9 +80,10 @@ double pcg(int n, mul_fun_t Mfun, void* Mdata, mul_fun_t Afun, void* Adata,
         is_converged = (rho/rho0 < rtol2);
     }
 
-    printf("%d steps, residual reduction %g (%s tol %g); time %g seconds, " \
-           "of which %g in the poisson\n", step, sqrt(rho/rho0),
-           is_converged ? "<=" : ">", rtol, toc(0), time_in_poisson);
+    printf("%d steps, residual reduction %g (%s tol %g); time %g seconds.\n " \
+           "Time in Poisson: %g seconds\nTime in SSOR: %g seconds\n", step,
+            sqrt(rho/rho0), is_converged ? "<=" : ">", rtol, toc(0),
+            time_in_poisson, time_in_SSOR);
 
     free(p);
     free(q);

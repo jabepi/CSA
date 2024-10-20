@@ -9,6 +9,7 @@
 #include "params.h"
 
 extern float time_in_poisson;
+extern float time_in_SSOR;
 
 /*@T
  * \section{3D Laplace operator}
@@ -22,7 +23,7 @@ extern float time_in_poisson;
  * $n \times n \times n$ mesh of $[0,1]^3$ ($N = n^3$, $h = 1/(n-1)$),
  * assuming Dirichlet boundary conditions.
  *@c*/
-#ifdef USE_NO_BRANCH
+#ifdef USE_NO_BRANCH_SSOR
 void mul_poisson3d(int N, void* data, double* restrict Ax, double* restrict x)
 {
     tic(1);
@@ -382,9 +383,73 @@ typedef struct pc_ssor_p3d_t {
  * the whole thing).  This will be useful shortly when we discuss additive
  * Schwarz preconditioners.
  *@c*/
-void ssor_forward_sweep(int n, int i1, int i2, int j1, int j2, int k1, int k2, 
+#ifdef USE_BLOCKED_SSOR
+#define BLOCK_SIZE 8
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+
+void ssor_forward_sweep(int n, int i1, int i2, int j1, int j2, int k1, int k2,
+                                double* restrict Ax, double w)
+{
+    tic(2);
+    #define AX(i,j,k) (Ax[((k)*n+(j))*n+(i)])
+    for (int kk = k1; kk < k2; kk += BLOCK_SIZE) {
+        int k_max = MIN(kk + BLOCK_SIZE, k2);
+        for (int jj = j1; jj < j2; jj += BLOCK_SIZE) {
+            int j_max = MIN(jj + BLOCK_SIZE, j2);
+            for (int ii = i1; ii < i2; ii += BLOCK_SIZE) {
+                int i_max = MIN(ii + BLOCK_SIZE, i2);
+                for (int k = kk; k < k_max; ++k) {
+                    for (int j = jj; j < j_max; ++j) {
+                        for (int i = ii; i < i_max; ++i) {
+                            double xx = AX(i,j,k);
+                            double xn = (i > 0)   ? AX(i-1,j,k) : 0.0;
+                            double xe = (j > 0)   ? AX(i,j-1,k) : 0.0;
+                            double xu = (k > 0)   ? AX(i,j,k-1) : 0.0;
+                            AX(i,j,k) = (xx + xn + xe + xu) / 6.0 * w;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    #undef AX
+    time_in_SSOR += toc(2);
+}
+
+void ssor_backward_sweep(int n, int i1, int i2, int j1, int j2, int k1, int k2,
+                                 double* restrict Ax, double w)
+{
+    tic(2);
+    #define AX(i,j,k) (Ax[((k)*n+(j))*n+(i)])
+    for (int kk = k2 - 1; kk >= k1; kk -= BLOCK_SIZE) {
+        int k_min = MAX(kk - BLOCK_SIZE + 1, k1);
+        for (int jj = j2 - 1; jj >= j1; jj -= BLOCK_SIZE) {
+            int j_min = MAX(jj - BLOCK_SIZE + 1, j1);
+            for (int ii = i2 - 1; ii >= i1; ii -= BLOCK_SIZE) {
+                int i_min = MAX(ii - BLOCK_SIZE + 1, i1);
+                for (int k = kk; k >= k_min; --k) {
+                    for (int j = jj; j >= j_min; --j) {
+                        for (int i = ii; i >= i_min; --i) {
+                            double xx = AX(i,j,k);
+                            double xs = (i < n-1) ? AX(i+1,j,k) : 0.0;
+                            double xw = (j < n-1) ? AX(i,j+1,k) : 0.0;
+                            double xd = (k < n-1) ? AX(i,j,k+1) : 0.0;
+                            AX(i,j,k) = (xx + xs + xw + xd) / 6.0 * w;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    #undef AX
+    time_in_SSOR += toc(2);
+}
+#else
+void ssor_forward_sweep(int n, int i1, int i2, int j1, int j2, int k1, int k2,
                         double* restrict Ax, double w)
 {
+    tic(2);
     #define AX(i,j,k) (Ax[((k)*n+(j))*n+(i)])
     for (int k = k1; k < k2; ++k) {
         for (int j = j1; j < j2; ++j) {
@@ -398,11 +463,13 @@ void ssor_forward_sweep(int n, int i1, int i2, int j1, int j2, int k1, int k2,
         }
     }
     #undef AX
+    time_in_SSOR += toc(2);
 }
 
-void ssor_backward_sweep(int n, int i1, int i2, int j1, int j2, int k1, int k2, 
+void ssor_backward_sweep(int n, int i1, int i2, int j1, int j2, int k1, int k2,
                          double* restrict Ax, double w)
 {
+    tic(2);
     #define AX(i,j,k) (Ax[((k)*n+(j))*n+(i)])
     for (int k = k2-1; k >= k1; --k) {
         for (int j = j2-1; j >= j1; --j) {
@@ -416,17 +483,21 @@ void ssor_backward_sweep(int n, int i1, int i2, int j1, int j2, int k1, int k2,
         }
     }
     #undef AX
+    time_in_SSOR += toc(2);
 }
+#endif
 
-void ssor_diag_sweep(int n, int i1, int i2, int j1, int j2, int k1, int k2, 
+void ssor_diag_sweep(int n, int i1, int i2, int j1, int j2, int k1, int k2,
                      double* restrict Ax, double w)
 {
+    tic(2);
     #define AX(i,j,k) (Ax[((k)*n+(j))*n+(i)])
     for (int k = k1; k < k2; ++k)
         for (int j = j1; j < j2; ++j)
             for (int i = i1; i < i2; ++i)
                 AX(i,j,k) *= (6*(2-w)/w);
     #undef AX
+    time_in_SSOR += toc(2);
 }
 
 /* @T
@@ -434,14 +505,13 @@ void ssor_diag_sweep(int n, int i1, int i2, int j1, int j2, int k1, int k2,
  * Finally, the [[pc_ssor_poisson3d]] function actually applies the
  * preconditioner.
  *@c*/
-void pc_ssor_poisson3d(int N, void* data, 
-                       double* restrict Ax, 
+void pc_ssor_poisson3d(int N, void* data, double* restrict Ax,
                        double* restrict x)
 {
     pc_ssor_p3d_t* ssor_data = (pc_ssor_p3d_t*) data;
     int n = ssor_data->n;
     double w = ssor_data->omega;
-    
+
     memcpy(Ax, x, N*sizeof(double));
     ssor_forward_sweep (n, 0,n, 0,n, 0,n, Ax, w);
     ssor_diag_sweep    (n, 0,n, 0,n, 0,n, Ax, w);
@@ -452,7 +522,7 @@ void pc_ssor_poisson3d(int N, void* data,
  * \subsection{Additive Schwarz preconditioning}
  *
  * One way of thinking about Jacobi and Gauss-Seidel is as a sequence
- * of local relaxation operations, each of which updates a variable 
+ * of local relaxation operations, each of which updates a variable
  * (or a set of variables, in the case of block variants) assuming
  * that the neighboring variables are known.  With Jacobi and Gauss-Seidel,
  * we update each variable exactly once in each pass.  In Schwarz methods,
@@ -489,8 +559,8 @@ typedef struct pc_schwarz_p3d_t {
  * the data; and then we write back the updates from the solve.
  * The data motion is implemented in [[schwarz_get]] and [[schwarz_add]].
  *@c*/
-void schwarz_get(int n, int i1, int i2, int j1, int j2, int k1, int k2, 
-                 double* restrict x_local, 
+void schwarz_get(int n, int i1, int i2, int j1, int j2, int k1, int k2,
+                 double* restrict x_local,
                  double* restrict x)
 {
     #define X(i,j,k) (x[((k)*n+(j))*n+(i)])
@@ -531,8 +601,8 @@ void schwarz_get(int n, int i1, int i2, int j1, int j2, int k1, int k2,
     #undef X
 }
 
-void schwarz_add(int n, int i1, int i2, int j1, int j2, int k1, int k2, 
-                 double* restrict Ax_local, 
+void schwarz_add(int n, int i1, int i2, int j1, int j2, int k1, int k2,
+                 double* restrict Ax_local,
                  double* restrict Ax)
 {
     #define AX(i,j,k) (Ax[((k)*n+(j))*n+(i)])
@@ -553,8 +623,8 @@ void schwarz_add(int n, int i1, int i2, int j1, int j2, int k1, int k2,
  * an overlap region (another $n/2+o/2$ node slab).  The same idea could
  * be applied to more regions, or to better approximate solvers.
  *@c*/
-void pc_schwarz_poisson3d(int N, void* data, 
-                          double* restrict Ax, 
+void pc_schwarz_poisson3d(int N, void* data,
+                          double* restrict Ax,
                           double* restrict x)
 {
     pc_schwarz_p3d_t* ssor_data = (pc_schwarz_p3d_t*) data;
@@ -588,7 +658,7 @@ void pc_schwarz_poisson3d(int N, void* data,
  * is very high frequency, the convergence will appear relatively
  * fast.  Without a good preconditioner, it takes more iterations
  * to correct a smooth error.  In order to illustrate these behaviors,
- * we provide two right-hand sides: a vector with one nonzero 
+ * we provide two right-hand sides: a vector with one nonzero
  * (computed via [[setup_rhs0]]) and a vector corresponding to a smooth
  * product of quadratics in each coordinate direction ([[setup_rhs1]]).
  *@c*/
