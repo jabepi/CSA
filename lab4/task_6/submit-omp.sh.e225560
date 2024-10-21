@@ -1,0 +1,7 @@
+/usr/bin/ld: cgp3d.o: relocation R_X86_64_32 against symbol `mul_poisson3d' can not be used when making a PIE object; recompile with -fPIE
+/usr/bin/ld: failed to set dynamic section sizes: bad value
+collect2: error: ld returned 1 exit status
+make: *** [Makefile:9: cgp3d.x] Error 1
+/var/spool/slurmd/job225560/slurm_script: line 13: ../cgp3d.x: No such file or directory
+/var/spool/slurmd/job225560/slurm_script: line 13: ../cgp3d.x: No such file or directory
+/var/spool/slurmd/job225560/slurm_script: line 13: ../cgp3d.x: No such file or directory

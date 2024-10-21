@@ -1,0 +1,21 @@
+rm -f *.o *~ cgp3d.x
+gcc -std=gnu99 -O3 -march=native -Wall -m64 -g -DCLOCK=CLOCK_REALTIME  -c cgp3d.c
+gcc -std=gnu99 -O3 -march=native -Wall -m64 -g -DCLOCK=CLOCK_REALTIME  -c pcg.c
+gcc -std=gnu99 -O3 -march=native -Wall -m64 -g -DCLOCK=CLOCK_REALTIME  -c params.c
+gcc -std=gnu99 -O3 -march=native -Wall -m64 -g -DCLOCK=CLOCK_REALTIME  -c timing.c
+gcc -o cgp3d.x cgp3d.o pcg.o params.o timing.o  -lm -lrt
+199 steps, residual reduction 9.0582e-07 (<= tol 1e-06); time 2.20127 seconds.
+ Time in Poisson: 0.636977 seconds
+Time in SSOR: 0 seconds
+Time in dotproduct: 0.600136 seconds
+rnorm = 8.45154e-08
+200 steps, residual reduction 0.0553634 (> tol 1e-06); time 18.7867 seconds.
+ Time in Poisson: 4.98134 seconds
+Time in SSOR: 0 seconds
+Time in dotproduct: 5.0689 seconds
+rnorm = 0.00372623
+200 steps, residual reduction 2.84774 (> tol 1e-06); time 149.793 seconds.
+ Time in Poisson: 39.6634 seconds
+Time in SSOR: 0 seconds
+Time in dotproduct: 40.052 seconds
+rnorm = 0.644564
