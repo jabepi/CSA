@@ -23,15 +23,8 @@ extern float time_in_SSOR;
  * $n \times n \times n$ mesh of $[0,1]^3$ ($N = n^3$, $h = 1/(n-1)$),
  * assuming Dirichlet boundary conditions.
  *@c*/
-<<<<<<< HEAD
-//Very parallel
-void mul_poisson3d(int N, void* data, 
-                   double* restrict Ax, 
-                   double* restrict x)
-=======
 #ifdef USE_NO_BRANCH_SSOR
 void mul_poisson3d(int N, void* data, double* restrict Ax, double* restrict x)
->>>>>>> b1a3531c684e0975edb9feb0f054ee128ad29c3e
 {
     tic(1);
     #define X(i,j,k) (x[((k)*n+(j))*n+(i)])

@@ -59,13 +59,20 @@ double pcg(int n, mul_fun_t Mfun, void* Mdata, mul_fun_t Afun, void* Adata,
     tic(0);
 
     /* Form residual */
+    // tic(1);
     Afun(n, Adata, r, x);
+    // double timeAfun = toc(1);
+
     for (int i = 0; i < n; ++i) r[i] = b[i]-r[i];
 
     for (step = 0; step < maxit && !is_converged; ++step) {
         Mfun(n, Mdata, z, r);
         rho_prev = rho;
+        
+        // tic(1);
         rho = dot(n, r, z);
+        // time_dotproduct += toc(1);
+
         if (step == 0) {
             rho0 = rho;
             memcpy(p, z, n*sizeof(double));
@@ -73,8 +80,15 @@ double pcg(int n, mul_fun_t Mfun, void* Mdata, mul_fun_t Afun, void* Adata,
             double beta = rho/rho_prev;
             for (int i = 0; i < n; ++i) p[i] = z[i] + beta*p[i];
         }
+        // tic(1);
         Afun(n, Adata, q, p);
-        double alpha = rho/dot(n, p, q);
+        // timeAfun += toc(1);
+
+        // tic(1);
+        double dotAux = dot(n, p, q);
+        // time_dotproduct += toc(1);
+
+        double alpha = rho/dotAux;
         for (int i = 0; i < n; ++i) x[i] += alpha*p[i];
         for (int i = 0; i < n; ++i) r[i] -= alpha*q[i];
         is_converged = (rho/rho0 < rtol2);
@@ -85,6 +99,8 @@ double pcg(int n, mul_fun_t Mfun, void* Mdata, mul_fun_t Afun, void* Adata,
             sqrt(rho/rho0), is_converged ? "<=" : ">", rtol, toc(0),
             time_in_poisson, time_in_SSOR);
 
+    // printf("Time in Afun: %g seconds\n", timeAfun);
+    // printf("Time in dotproduct: %g seconds\n", time_dotproduct);
     free(p);
     free(q);
     free(z);
