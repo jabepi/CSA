@@ -9,9 +9,9 @@ make -C "/scratch/nas/1/sca1011/CSA/lab4" CFLAGS="-std=gnu99 -O3 -march=native -
 
 for size in 50 100 150 200; do
   printf -- "---- Running with size: %d ----\n" "$size"
-  for w in $(seq 5 5 40); do
-    echo -n "$w "
-  ../cgp3d.x -w "$w" -M 2000 -p as -o "$size" |
+  for o in $(seq 0 10 200); do
+    echo -n "$o "
+    ../cgp3d.x -o "$o" -M 500 -p as -n "$size" |
       grep "residual reduction" |
       sed -n 's/\([0-9]*\) steps.*time \([0-9.]*\) seconds.*/Iterations: \1, Time: \2 seconds/p'
   done
