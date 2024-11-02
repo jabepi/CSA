@@ -13,7 +13,7 @@ float time_in_poisson = 0;
 float time_in_SSOR = 0;
 
 #ifdef USE_NO_BRANCH_SSOR
-void mul_poisson3d(int N, void* data, std::vector<double>& Ax, const std::vector<double>& x)
+void mul_poisson3d(void* data, std::vector<double>& Ax, const std::vector<double>& x)
 {
     tic(1);
     #define X(i,j,k) (x[((k)*n+(j))*n+(i)])
@@ -147,7 +147,7 @@ void mul_poisson3d(int N, void* data, std::vector<double>& Ax, const std::vector
 
 
 #elif defined(USE_LOOP_ORDER)
-void mul_poisson3d(int N, void* data, std::vector<double>& Ax, const std::vector<double>& x)
+void mul_poisson3d(void* data, std::vector<double>& Ax, const std::vector<double>& x)
 {
     tic(1);
     #define X(i,j,k) (x[((k)*n+(j))*n+(i)])
@@ -197,7 +197,7 @@ void mul_poisson3d(int N, void* data, std::vector<double>& Ax, const std::vector
     time_in_poisson += toc(1);
 }
 #elif defined(USE_PARTIAL_PREDICATION)
-void mul_poisson3d(int N, void* data, std::vector<double>& Ax, const std::vector<double>& x)
+void mul_poisson3d(void* data, std::vector<double>& Ax, const std::vector<double>& x)
 {
     tic(1);
     #define X(i,j,k) (x[((k)*n+(j))*n+(i)])
@@ -235,7 +235,7 @@ void mul_poisson3d(int N, void* data, std::vector<double>& Ax, const std::vector
     time_in_poisson += toc(1);
 }
 #elif defined(USE_BLOCKING)
-void mul_poisson3d(int N, void* data, std::vector<double>& Ax, const std::vector<double>& x)
+void mul_poisson3d(void* data, std::vector<double>& Ax, const std::vector<double>& x)
 {
     tic(1);
     #define X(i,j,k) (x[((k)*n+(j))*n+(i)])
@@ -293,7 +293,7 @@ void mul_poisson3d(int N, void* data, std::vector<double>& Ax, const std::vector
     time_in_poisson += toc(1);
 }
 #else
-void mul_poisson3d(int N, void* data, std::vector<double>& Ax, const std::vector<double>& x)
+void mul_poisson3d(void* data, std::vector<double>& Ax, const std::vector<double>& x)
 {
     tic(1);
     #define X(i,j,k) (x[((k)*n+(j))*n+(i)])
@@ -322,7 +322,7 @@ void mul_poisson3d(int N, void* data, std::vector<double>& Ax, const std::vector
 }
 #endif
 
-void pc_identity(int n, void* data, std::vector<double>& Ax, const std::vector<double>& x)
+void pc_identity(void* data, std::vector<double>& Ax, const std::vector<double>& x)
 {
     Ax.assign(x.begin(), x.end());
 }
@@ -449,7 +449,7 @@ void ssor_diag_sweep(int n, int i1, int i2, int j1, int j2, int k1, int k2,
     time_in_SSOR += toc(2);
 }
 
-void pc_ssor_poisson3d(int N, void* data, std::vector<double>& Ax, const std::vector<double>& x)
+void pc_ssor_poisson3d(void* data, std::vector<double>& Ax, const std::vector<double>& x)
 {
     pc_ssor_p3d_t* ssor_data = (pc_ssor_p3d_t*) data;
     int n = ssor_data->n;
@@ -524,7 +524,7 @@ void schwarz_add(int n, int i1, int i2, int j1, int j2, int k1, int k2,
     #undef AX
 }
 
-void pc_schwarz_poisson3d(int N, void* data, std::vector<double>& Ax, const std::vector<double>& x)
+void pc_schwarz_poisson3d(void* data, std::vector<double>& Ax, const std::vector<double>& x)
 {
     pc_schwarz_p3d_t* ssor_data = (pc_schwarz_p3d_t*) data;
     std::vector<double>& scratch = ssor_data->scratch;
@@ -599,16 +599,16 @@ int main(int argc, char** argv)
     if (params.ptype == PC_SCHWARZ) {
         std::vector<double> scratch(N, 0.0);
         pc_schwarz_p3d_t pcdata = {n, params.overlap, params.omega, scratch};
-        pcg(N, pc_schwarz_poisson3d, &pcdata, mul_poisson3d, &n, x, b, maxit, rtol);
+        pcg(pc_schwarz_poisson3d, &pcdata, mul_poisson3d, &n, x, b, maxit, rtol);
     } else if (params.ptype == PC_SSOR) {
         pc_ssor_p3d_t ssor_data = {n, params.omega};
-        pcg(N, pc_ssor_poisson3d, &ssor_data, mul_poisson3d, &n, x, b, maxit, rtol);
+        pcg(pc_ssor_poisson3d, &ssor_data, mul_poisson3d, &n, x, b, maxit, rtol);
     } else {
-        pcg(N, pc_identity, NULL, mul_poisson3d, &n, x, b, maxit, rtol);
+        pcg(pc_identity, NULL, mul_poisson3d, &n, x, b, maxit, rtol);
     }
 
     /* Check answer */
-    mul_poisson3d(N, &n, r, x);
+    mul_poisson3d(&n, r, x);
     double rnorm2 = 0;
     for (int i = 0; i < n; ++i) r[i] = b[i]-r[i];
     for (int i = 0; i < n; ++i) rnorm2 += r[i]*r[i];
