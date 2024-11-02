@@ -9,12 +9,9 @@ default: cgp3d.x
 
 # === Code
 
-cgp3d.x: cgp3d.o
-	$(CC) -o $@ $^ $(LFLAGS) $(LIBS) $(OMPFLAGS)
-
-.cc.o:
-	$(CC) $(CFLAGS) $(INCLUDE) $(OMPFLAGS) -c $<
+cgp3d.x: cgp3d.cc
+	$(CC) $(CFLAGS) $(OMPFLAGS) -o $@ $< $(LDFLAGS) $(LIBS)
 
 .PHONY: clean
 clean:
-	rm -f *.o *~ cgp3d.x
+	rm -f *~ cgp3d.x
