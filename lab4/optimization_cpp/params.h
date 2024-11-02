@@ -6,14 +6,6 @@
 #include <string.h>
 #include <unistd.h>
 
-/*@T
- * \section{Solver parameters}
- *
- * The [[solve_param_t]] structure holds the parameters that
- * describe the simulation.  These parameters are filled in
- * by the [[get_params]] function.  Details of the parameters
- * are described elsewhere in the code.
- *@c*/
 enum {                /* Types of preconditioners available: */
     PC_ID = 1,        /* 1. Identity                         */
     PC_SSOR = 2,      /* 2. SSOR                             */
