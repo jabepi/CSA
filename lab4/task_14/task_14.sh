@@ -17,5 +17,4 @@ for size in 50 100 150 200; do
   ../cgp3d.x -w  -M 2000 -p as -o "$size" |
       grep "residual reduction" |
       sed -n 's/\([0-9]*\) steps.*time \([0-9.]*\) seconds.*/Iterations: \1, Time: \2 seconds/p'
-  done
 done
