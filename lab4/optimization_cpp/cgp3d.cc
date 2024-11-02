@@ -13,7 +13,7 @@ float time_in_poisson = 0;
 float time_in_SSOR = 0;
 
 #ifdef USE_NO_BRANCH_SSOR
-void mul_poisson3d(int N, void* data, double* Ax, double* x)
+void mul_poisson3d(int N, void* data, std::vector<double>& Ax, const std::vector<double>& x)
 {
     tic(1);
     #define X(i,j,k) (x[((k)*n+(j))*n+(i)])
@@ -147,7 +147,7 @@ void mul_poisson3d(int N, void* data, double* Ax, double* x)
 
 
 #elif defined(USE_LOOP_ORDER)
-void mul_poisson3d(int N, void* data, double* Ax, double* x)
+void mul_poisson3d(int N, void* data, std::vector<double>& Ax, const std::vector<double>& x)
 {
     tic(1);
     #define X(i,j,k) (x[((k)*n+(j))*n+(i)])
@@ -197,7 +197,7 @@ void mul_poisson3d(int N, void* data, double* Ax, double* x)
     time_in_poisson += toc(1);
 }
 #elif defined(USE_PARTIAL_PREDICATION)
-void mul_poisson3d(int N, void* data, double* Ax, double* x)
+void mul_poisson3d(int N, void* data, std::vector<double>& Ax, const std::vector<double>& x)
 {
     tic(1);
     #define X(i,j,k) (x[((k)*n+(j))*n+(i)])
@@ -235,7 +235,7 @@ void mul_poisson3d(int N, void* data, double* Ax, double* x)
     time_in_poisson += toc(1);
 }
 #elif defined(USE_BLOCKING)
-void mul_poisson3d(int N, void* data, double* Ax, double* x)
+void mul_poisson3d(int N, void* data, std::vector<double>& Ax, const std::vector<double>& x)
 {
     tic(1);
     #define X(i,j,k) (x[((k)*n+(j))*n+(i)])
@@ -293,7 +293,7 @@ void mul_poisson3d(int N, void* data, double* Ax, double* x)
     time_in_poisson += toc(1);
 }
 #else
-void mul_poisson3d(int N, void* data, double* Ax, double* x)
+void mul_poisson3d(int N, void* data, std::vector<double>& Ax, const std::vector<double>& x)
 {
     tic(1);
     #define X(i,j,k) (x[((k)*n+(j))*n+(i)])
@@ -465,12 +465,12 @@ typedef struct pc_schwarz_p3d_t {
     int n;           /* Number of mesh points on a side */
     int overlap;     /* Number of points through the overlap region */
     double omega;    /* SSOR relaxation parameter */
-    double* scratch; /* Scratch space used by the preconditioner */
+    std::vector<double>& scratch; /* Scratch space used by the preconditioner */
 } pc_schwarz_p3d_t;
 
 void schwarz_get(int n, int i1, int i2, int j1, int j2, int k1, int k2,
-                 double* x_local,
-                 double* x)
+                 std::vector<double>& x_local,
+                 const std::vector<double>& x)
 {
     #define X(i,j,k) (x[((k)*n+(j))*n+(i)])
     #define XL(i,j,k) (x_local[((k)*n+(j))*n+(i)])
@@ -527,7 +527,7 @@ void schwarz_add(int n, int i1, int i2, int j1, int j2, int k1, int k2,
 void pc_schwarz_poisson3d(int N, void* data, std::vector<double>& Ax, const std::vector<double>& x)
 {
     pc_schwarz_p3d_t* ssor_data = (pc_schwarz_p3d_t*) data;
-    double* scratch = ssor_data->scratch;
+    std::vector<double>& scratch = ssor_data->scratch;
     int n = ssor_data->n;
     int o = ssor_data->overlap / 2;
     double w = ssor_data->omega;
@@ -536,17 +536,17 @@ void pc_schwarz_poisson3d(int N, void* data, std::vector<double>& Ax, const std:
     int n1 = n / 2 + o;
     int n2 = n / 2 - o;
 
-    schwarz_get(n, 0, n, 0, n, 0, n1, scratch, x.data());
-    ssor_forward_sweep(n, 0, n, 0, n, 0, n1, scratch, w);
-    ssor_diag_sweep(n, 0, n, 0, n, 0, n1, scratch, w);
-    ssor_backward_sweep(n, 0, n, 0, n, 0, n1, scratch, w);
-    schwarz_add(n, 0, n, 0, n, 0, n1, scratch, Ax.data());
+    schwarz_get(n, 0, n, 0, n, 0, n1, scratch, x);
+    ssor_forward_sweep(n, 0, n, 0, n, 0, n1, scratch.data(), w);
+    ssor_diag_sweep(n, 0, n, 0, n, 0, n1, scratch.data(), w);
+    ssor_backward_sweep(n, 0, n, 0, n, 0, n1, scratch.data(), w);
+    schwarz_add(n, 0, n, 0, n, 0, n1, scratch.data(), Ax.data());
 
-    schwarz_get(n, 0, n, 0, n, n2, n, scratch, x.data());
-    ssor_forward_sweep(n, 0, n, 0, n, n2, n, scratch, w);
-    ssor_diag_sweep(n, 0, n, 0, n, n2, n, scratch, w);
-    ssor_backward_sweep(n, 0, n, 0, n, n2, n, scratch, w);
-    schwarz_add(n, 0, n, 0, n, n2, n, scratch, Ax.data());
+    schwarz_get(n, 0, n, 0, n, n2, n, scratch, x);
+    ssor_forward_sweep(n, 0, n, 0, n, n2, n, scratch.data(), w);
+    ssor_diag_sweep(n, 0, n, 0, n, n2, n, scratch.data(), w);
+    ssor_backward_sweep(n, 0, n, 0, n, n2, n, scratch.data(), w);
+    schwarz_add(n, 0, n, 0, n, n2, n, scratch.data(), Ax.data());
 }
 
 void setup_rhs0(int n, double* b)
@@ -598,7 +598,7 @@ int main(int argc, char** argv)
 
     if (params.ptype == PC_SCHWARZ) {
         std::vector<double> scratch(N, 0.0);
-        pc_schwarz_p3d_t pcdata = {n, params.overlap, params.omega, scratch.data()};
+        pc_schwarz_p3d_t pcdata = {n, params.overlap, params.omega, scratch};
         pcg(N, pc_schwarz_poisson3d, &pcdata, mul_poisson3d, &n, x, b, maxit, rtol);
     } else if (params.ptype == PC_SSOR) {
         pc_ssor_p3d_t ssor_data = {n, params.omega};
@@ -608,7 +608,7 @@ int main(int argc, char** argv)
     }
 
     /* Check answer */
-    mul_poisson3d(N, &n, r.data(), x.data());
+    mul_poisson3d(N, &n, r, x);
     double rnorm2 = 0;
     for (int i = 0; i < n; ++i) r[i] = b[i]-r[i];
     for (int i = 0; i < n; ++i) rnorm2 += r[i]*r[i];

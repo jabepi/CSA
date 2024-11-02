@@ -2,7 +2,7 @@ CC = g++
 CFLAGS=-std=c++20 -O3 -march=native -Wall -m64 -g -DCLOCK=CLOCK_REALTIME -fpermissive
 OMPFLAGS=-fopenmp
 LDFLAGS=-g
-LIBS=-lm -lrt
+LIBS=-lm -lrt 
 
 .PHONY: default
 default: cgp3d.x

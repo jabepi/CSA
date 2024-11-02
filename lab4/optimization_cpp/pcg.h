@@ -7,27 +7,24 @@
 #include <math.h>
 #include "timing.h"
 #include <vector>
+#include <numeric>
 
-typedef void (*mul_fun_t)(int n, void* data, double* Ax, double* x);
-typedef void (*mul_fun_vec_t)(int n, void* data, std::vector<double>& Ax, const std::vector<double>& x);
+typedef void (*mul_fun_t)(int n, void* data, std::vector<double>& Ax, const std::vector<double>& x);
 
 extern float time_in_poisson;
 extern float time_in_SSOR;
 
-double dot(int n, const std::vector<double>& x, const std::vector<double>& y)
+double dot(const std::vector<double>& x, const std::vector<double>& y)
 {
     double result = 0;
-    for (int i = 0; i < n; ++i)
+    for (size_t i = 0; i < x.size(); ++i)
         result += x[i]*y[i];
     return result;
 }
 
-double pcg(int n,
-           mul_fun_vec_t Mfun, void* Mdata,
-           mul_fun_t Afun, void* Adata,
-           std::vector<double>& x,
-           const std::vector<double>& b,
-           int maxit,
+
+double pcg(int n, mul_fun_t Mfun, void* Mdata, mul_fun_t Afun, void* Adata,
+           std::vector<double>& x, const std::vector<double>& b, int maxit,
            double rtol)
 {
     std::vector<double> r(n, 0.0);
@@ -45,7 +42,7 @@ double pcg(int n,
     tic(0);
 
     /* Form residual */
-    Afun(n, Adata, r.data(), x.data());
+    Afun(n, Adata, r, x);
 
     for (int i = 0; i < n; ++i) r[i] = b[i]-r[i];
 
@@ -53,7 +50,8 @@ double pcg(int n,
         Mfun(n, Mdata, z, r);
         rho_prev = rho;
 
-        rho = dot(n, r, z);
+        rho = dot(r, z);
+        // rho = std::inner_product(r.begin(), r.end(), z.begin(), 0.0);
 
         if (step == 0) {
             rho0 = rho;
@@ -62,9 +60,10 @@ double pcg(int n,
             double beta = rho/rho_prev;
             for (int i = 0; i < n; ++i) p[i] = z[i] + beta*p[i];
         }
-        Afun(n, Adata, q.data(), p.data());
+        Afun(n, Adata, q, p);
 
-        double alpha = rho/dot(n, p, q);
+        double alpha = rho/dot(p, q);
+        // double alpha = rho/std::inner_product(p.begin(), p.end(), q.begin(), 0.0);
         for (int i = 0; i < n; ++i) x[i] += alpha*p[i];
         for (int i = 0; i < n; ++i) r[i] -= alpha*q[i];
         is_converged = (rho/rho0 < rtol2);
