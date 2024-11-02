@@ -12,7 +12,7 @@ float time_in_poisson = 0;
 float time_in_SSOR = 0;
 
 #ifdef USE_NO_BRANCH_SSOR
-void mul_poisson3d(int N, void* data, double* restrict Ax, double* restrict x)
+void mul_poisson3d(int N, void* data, double* Ax, double* x)
 {
     tic(1);
     #define X(i,j,k) (x[((k)*n+(j))*n+(i)])
@@ -146,7 +146,7 @@ void mul_poisson3d(int N, void* data, double* restrict Ax, double* restrict x)
 
 
 #elif defined(USE_LOOP_ORDER)
-void mul_poisson3d(int N, void* data, double* restrict Ax, double* restrict x)
+void mul_poisson3d(int N, void* data, double* Ax, double* x)
 {
     tic(1);
     #define X(i,j,k) (x[((k)*n+(j))*n+(i)])
@@ -196,7 +196,7 @@ void mul_poisson3d(int N, void* data, double* restrict Ax, double* restrict x)
     time_in_poisson += toc(1);
 }
 #elif defined(USE_PARTIAL_PREDICATION)
-void mul_poisson3d(int N, void* data, double* restrict Ax, double* restrict x)
+void mul_poisson3d(int N, void* data, double* Ax, double* x)
 {
     tic(1);
     #define X(i,j,k) (x[((k)*n+(j))*n+(i)])
@@ -234,7 +234,7 @@ void mul_poisson3d(int N, void* data, double* restrict Ax, double* restrict x)
     time_in_poisson += toc(1);
 }
 #elif defined(USE_BLOCKING)
-void mul_poisson3d(int N, void* data, double* restrict Ax, double* restrict x)
+void mul_poisson3d(int N, void* data, double* Ax, double* x)
 {
     tic(1);
     #define X(i,j,k) (x[((k)*n+(j))*n+(i)])
@@ -292,7 +292,7 @@ void mul_poisson3d(int N, void* data, double* restrict Ax, double* restrict x)
     time_in_poisson += toc(1);
 }
 #else
-void mul_poisson3d(int N, void* data, double* restrict Ax, double* restrict x)
+void mul_poisson3d(int N, void* data, double* Ax, double* x)
 {
     tic(1);
     #define X(i,j,k) (x[((k)*n+(j))*n+(i)])
@@ -379,7 +379,7 @@ typedef struct pc_ssor_p3d_t {
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
 void ssor_forward_sweep(int n, int i1, int i2, int j1, int j2, int k1, int k2,
-                                double* restrict Ax, double w)
+                                double* Ax, double w)
 {
     tic(2);
     #define AX(i,j,k) (Ax[((k)*n+(j))*n+(i)])
@@ -408,7 +408,7 @@ void ssor_forward_sweep(int n, int i1, int i2, int j1, int j2, int k1, int k2,
 }
 
 void ssor_backward_sweep(int n, int i1, int i2, int j1, int j2, int k1, int k2,
-                                 double* restrict Ax, double w)
+                                 double* Ax, double w)
 {
     tic(2);
     #define AX(i,j,k) (Ax[((k)*n+(j))*n+(i)])
@@ -437,7 +437,7 @@ void ssor_backward_sweep(int n, int i1, int i2, int j1, int j2, int k1, int k2,
 }
 #else
 void ssor_forward_sweep(int n, int i1, int i2, int j1, int j2, int k1, int k2,
-                        double* restrict Ax, double w)
+                        double* Ax, double w)
 {
     tic(2);
     #define AX(i,j,k) (Ax[((k)*n+(j))*n+(i)])
@@ -457,7 +457,7 @@ void ssor_forward_sweep(int n, int i1, int i2, int j1, int j2, int k1, int k2,
 }
 
 void ssor_backward_sweep(int n, int i1, int i2, int j1, int j2, int k1, int k2,
-                         double* restrict Ax, double w)
+                         double* Ax, double w)
 {
     tic(2);
     #define AX(i,j,k) (Ax[((k)*n+(j))*n+(i)])
@@ -478,7 +478,7 @@ void ssor_backward_sweep(int n, int i1, int i2, int j1, int j2, int k1, int k2,
 #endif
 
 void ssor_diag_sweep(int n, int i1, int i2, int j1, int j2, int k1, int k2,
-                     double* restrict Ax, double w)
+                     double* Ax, double w)
 {
     tic(2);
     #define AX(i,j,k) (Ax[((k)*n+(j))*n+(i)])
@@ -495,8 +495,7 @@ void ssor_diag_sweep(int n, int i1, int i2, int j1, int j2, int k1, int k2,
  * Finally, the [[pc_ssor_poisson3d]] function actually applies the
  * preconditioner.
  *@c*/
-void pc_ssor_poisson3d(int N, void* data, double* restrict Ax,
-                       double* restrict x)
+void pc_ssor_poisson3d(int N, void* data, double* Ax, double* x)
 {
     pc_ssor_p3d_t* ssor_data = (pc_ssor_p3d_t*) data;
     int n = ssor_data->n;
@@ -544,14 +543,15 @@ typedef struct pc_schwarz_p3d_t {
 /*@T
  *
  * In order to compute independently on overlapping subdomains, we first
+ * In order to compute independently on overlapping subdomains, we first
  * get the local data from the vector to which we're applying the
  * preconditioner; then we do an inexact solve on the local piece of
  * the data; and then we write back the updates from the solve.
  * The data motion is implemented in [[schwarz_get]] and [[schwarz_add]].
  *@c*/
 void schwarz_get(int n, int i1, int i2, int j1, int j2, int k1, int k2,
-                 double* restrict x_local,
-                 double* restrict x)
+                 double* x_local,
+                 double* x)
 {
     #define X(i,j,k) (x[((k)*n+(j))*n+(i)])
     #define XL(i,j,k) (x_local[((k)*n+(j))*n+(i)])
@@ -592,8 +592,8 @@ void schwarz_get(int n, int i1, int i2, int j1, int j2, int k1, int k2,
 }
 
 void schwarz_add(int n, int i1, int i2, int j1, int j2, int k1, int k2,
-                 double* restrict Ax_local,
-                 double* restrict Ax)
+                 double* Ax_local,
+                 double* Ax)
 {
     #define AX(i,j,k) (Ax[((k)*n+(j))*n+(i)])
     #define AXL(i,j,k) (Ax_local[((k)*n+(j))*n+(i)])
@@ -614,8 +614,8 @@ void schwarz_add(int n, int i1, int i2, int j1, int j2, int k1, int k2,
  * be applied to more regions, or to better approximate solvers.
  *@c*/
 void pc_schwarz_poisson3d(int N, void* data,
-                          double* restrict Ax,
-                          double* restrict x)
+                          double* Ax,
+                          double* x)
 {
     pc_schwarz_p3d_t* ssor_data = (pc_schwarz_p3d_t*) data;
     double* scratch = ssor_data->scratch;

@@ -23,8 +23,8 @@ double dot(int n, const double* x, const double* y)
 double pcg(int n,
            mul_fun_t Mfun, void* Mdata,
            mul_fun_t Afun, void* Adata,
-           double* restrict x,
-           const double* restrict b,
+           double* x,
+           const double* b,
            int maxit,
            double rtol)
 {
