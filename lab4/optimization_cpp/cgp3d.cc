@@ -4,6 +4,7 @@
 #include <math.h>
 #include <assert.h>
 #include <vector>
+#include <ranges>
 
 #include "timing.h"
 #include "pcg.h"
@@ -549,24 +550,20 @@ void pc_schwarz_poisson3d(void* data, std::vector<double>& Ax, const std::vector
     schwarz_add(n, 0, n, 0, n, n2, n, scratch.data(), Ax.data());
 }
 
-void setup_rhs0(int n, double* b)
+void setup_rhs1(std::vector<double>& b)
 {
-    int N = n*n*n;
-    memset(b, 0, N*sizeof(double));
-    b[0] = 1;
-}
+    auto n = b.size();
+    std::fill(b.begin(), b.end(), 0.0);
 
-void setup_rhs1(int n, double* b)
-{
-    int N = n*n*n;
-    memset(b, 0, N*sizeof(double));
-    for (int i = 0; i < n; ++i) {
-        double x = 1.0*(i+1)/(n+1);
-        for (int j = 0; j < n; ++j) {
-            double y = 1.0*(i+1)/(n+1);
-            for (int k = 0; k < n; ++k) {
-                double z = 1.0*(i+1)/(n+1);
-                b[(k*n+j)*n+i] = x*(1-x) * y*(1-y) * z*(1-z);
+    auto index = [n](size_t i, size_t j, size_t k) { return (k*n + j)*n + i; };
+
+    for (auto i : std::views::iota(0, n)) {
+        double x = 1.0 * (i + 1) / (n + 1);
+        for (auto j : std::views::iota(0, n)) {
+            double y = 1.0 * (j + 1) / (n + 1);
+            for (auto k : std::views::iota(0, n)) {
+                double z = 1.0 * (k + 1) / (n + 1);
+                b[index(i, j, k)] = x * (1 - x) * y * (1 - y) * z * (1 - z);
             }
         }
     }
@@ -587,9 +584,8 @@ int main(int argc, char** argv)
 
     /* Set up right hand side */
 #ifdef USE_RHS0
-    setup_rhs0(n, b.data());
 #else
-    setup_rhs1(n, b.data());
+    setup_rhs1(b);
 #endif
 
     /* Solve via PCG */

@@ -46,7 +46,7 @@ double pcg(mul_fun_t Mfun, void* Mdata, mul_fun_t Afun, void* Adata,
     /* Form residual */
     Afun(Adata, r, x);
 
-    for (auto i = 0; i < n; ++i) r[i] = b[i]-r[i];
+    for (size_t i = 0; i < n; ++i) r[i] = b[i]-r[i];
 
     for (step = 0; step < maxit && !is_converged; ++step) {
         Mfun(Mdata, z, r);
@@ -60,14 +60,14 @@ double pcg(mul_fun_t Mfun, void* Mdata, mul_fun_t Afun, void* Adata,
             p = z;
         } else {
             double beta = rho/rho_prev;
-            for (auto i = 0; i < n; ++i) p[i] = z[i] + beta*p[i];
+            for (size_t i = 0; i < n; ++i) p[i] = z[i] + beta*p[i];
         }
         Afun(Adata, q, p);
 
         double alpha = rho/dot(p, q);
         // double alpha = rho/std::inner_product(p.begin(), p.end(), q.begin(), 0.0);
-        for (auto i = 0; i < n; ++i) x[i] += alpha*p[i];
-        for (auto i = 0; i < n; ++i) r[i] -= alpha*q[i];
+        for (size_t i = 0; i < n; ++i) x[i] += alpha*p[i];
+        for (size_t i = 0; i < n; ++i) r[i] -= alpha*q[i];
         is_converged = (rho/rho0 < rtol2);
     }
 
