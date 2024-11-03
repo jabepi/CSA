@@ -1,25 +1,9 @@
-#ifndef PARAMS_H
-#define PARAMS_H
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include "params.h"
 
-enum {                /* Types of preconditioners available: */
-    PC_ID = 1,        /* 1. Identity                         */
-    PC_SSOR = 2,      /* 2. SSOR                             */
-    PC_SCHWARZ = 3    /* 3. Additive Schwarz                 */
-};
-
-typedef struct solve_param_t {
-    int    n;       /* Mesh size */
-    int    maxit;   /* Maximum PCG iterations */
-    double rtol;    /* Relative residual convergence tolerance */
-    int    ptype;   /* Preconditioner type */
-    double omega;   /* SSOR relaxation parameter */
-    int    overlap; /* Overlap size */
-} solve_param_t;
 
 static void print_usage()
 {
@@ -58,8 +42,8 @@ int get_params(int argc, char** argv, solve_param_t* params)
     default_params(params);
     while ((c = getopt(argc, argv, optstring)) != -1) {
         switch (c) {
-        case 'h':
-            print_usage();
+        case 'h': 
+            print_usage(); 
             return -1;
         case 'p':
             if (strcmp(optarg, "id") == 0) {
@@ -85,5 +69,3 @@ int get_params(int argc, char** argv, solve_param_t* params)
     }
     return 0;
 }
-
-#endif /* PARAMS_H */
