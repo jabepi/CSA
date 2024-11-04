@@ -7,6 +7,7 @@
 #include "timing.h"
 #include "pcg.h"
 #include "params.h"
+#include <omp.h>
 
 extern float time_in_poisson;
 extern float time_in_SSOR;
@@ -257,17 +258,18 @@ void mul_poisson3d(int N, void* data, double* restrict Ax, double* restrict x)
 
     // Set default block sizes if not defined
     #ifndef Bk
-    #define Bk 8
+    #define Bk 4
     #endif
 
     #ifndef Bj
-    #define Bj 8
+    #define Bj 4
     #endif
 
     #ifndef Bi
     #define Bi 32
     #endif
 
+    #pragma omp parallel for collapse(3) shared(n, x, Ax, inv_h2)
     for (int kk = 0; kk < n; kk += Bk) {
         for (int jj = 0; jj < n; jj += Bj) {
             for (int ii = 0; ii < n; ii += Bi) {
@@ -312,6 +314,7 @@ void mul_poisson3d(int N, void* data, double* restrict Ax, double* restrict x)
 
     int n = *(int*) data;
     int inv_h2 = (n-1) * (n-1);
+    #pragma omp parallel for collapse(3)
     for (int k = 0; k < n; ++k) {
         for (int j = 0; j < n; ++j) {
             for (int i = 0; i < n; ++i) {
@@ -453,6 +456,7 @@ void ssor_forward_sweep(int n, int i1, int i2, int j1, int j2, int k1, int k2,
 {
     tic(2);
     #define AX(i,j,k) (Ax[((k)*n+(j))*n+(i)])
+    
     for (int k = k1; k < k2; ++k) {
         for (int j = j1; j < j2; ++j) {
             for (int i = i1; i < i2; ++i) {
@@ -468,11 +472,13 @@ void ssor_forward_sweep(int n, int i1, int i2, int j1, int j2, int k1, int k2,
     time_in_SSOR += toc(2);
 }
 
+
 void ssor_backward_sweep(int n, int i1, int i2, int j1, int j2, int k1, int k2,
                          double* restrict Ax, double w)
 {
     tic(2);
     #define AX(i,j,k) (Ax[((k)*n+(j))*n+(i)])
+    
     for (int k = k2-1; k >= k1; --k) {
         for (int j = j2-1; j >= j1; --j) {
             for (int i = i2-1; i >= i1; --i) {
@@ -494,13 +500,18 @@ void ssor_diag_sweep(int n, int i1, int i2, int j1, int j2, int k1, int k2,
 {
     tic(2);
     #define AX(i,j,k) (Ax[((k)*n+(j))*n+(i)])
+    
+    // Parallelize the loop
+    #pragma omp parallel for collapse(3)
     for (int k = k1; k < k2; ++k)
         for (int j = j1; j < j2; ++j)
             for (int i = i1; i < i2; ++i)
                 AX(i,j,k) *= (6*(2-w)/w);
+
     #undef AX
     time_in_SSOR += toc(2);
 }
+
 
 /* @T
  *
@@ -568,40 +579,56 @@ void schwarz_get(int n, int i1, int i2, int j1, int j2, int k1, int k2,
     #define X(i,j,k) (x[((k)*n+(j))*n+(i)])
     #define XL(i,j,k) (x_local[((k)*n+(j))*n+(i)])
 
+    // Parallelize the main copy loop
+    #pragma omp parallel for collapse(3)
     for (int k = k1; k < k2; ++k)
         for (int j = j1; j < j2; ++j)
             for (int i = i1; i < i2; ++i)
                 XL(i,j,k) = X(i,j,k);
 
-    if (k1 > 0)
+    // Parallelize boundary initialization
+    if (k1 > 0) {
+        #pragma omp parallel for collapse(2)
         for (int j = j1; j < j2; ++j)
             for (int i = i1; i < i2; ++i)
                 XL(i,j,k1-1) = 0;
-    if (j1 > 0)
+    }
+    if (j1 > 0) {
+        #pragma omp parallel for collapse(2)
         for (int k = k1; k < k2; ++k)
             for (int i = i1; i < i2; ++i)
                 XL(i,j1-1,k) = 0;
-    if (i1 > 0)
+    }
+    if (i1 > 0) {
+        #pragma omp parallel for collapse(2)
         for (int k = k1; k < k2; ++k)
             for (int j = j1; j < j2; ++j)
                 XL(i1-1,j,k) = 0;
+    }
 
-    if (k2 < n)
+    if (k2 < n) {
+        #pragma omp parallel for collapse(2)
         for (int j = j1; j < j2; ++j)
             for (int i = i1; i < i2; ++i)
                 XL(i,j,k2) = 0;
-    if (j2 < n)
+    }
+    if (j2 < n) {
+        #pragma omp parallel for collapse(2)
         for (int k = k1; k < k2; ++k)
             for (int i = i1; i < i2; ++i)
                 XL(i,j2,k) = 0;
-    if (i2 < n)
+    }
+    if (i2 < n) {
+        #pragma omp parallel for collapse(2)
         for (int k = k1; k < k2; ++k)
             for (int j = j1; j < j2; ++j)
                 XL(i2,j,k) = 0;
+    }
 
     #undef XL
     #undef X
 }
+
 
 void schwarz_add(int n, int i1, int i2, int j1, int j2, int k1, int k2,
                  double* restrict Ax_local,
@@ -609,13 +636,18 @@ void schwarz_add(int n, int i1, int i2, int j1, int j2, int k1, int k2,
 {
     #define AX(i,j,k) (Ax[((k)*n+(j))*n+(i)])
     #define AXL(i,j,k) (Ax_local[((k)*n+(j))*n+(i)])
+
+    // Parallelize the loop
+    #pragma omp parallel for collapse(3)
     for (int k = k1; k < k2; ++k)
         for (int j = j1; j < j2; ++j)
             for (int i = i1; i < i2; ++i)
                 AX(i,j,k) += AXL(i,j,k);
+
     #undef AXL
     #undef AX
 }
+
 
 /*@T
  *
@@ -705,12 +737,14 @@ int main(int argc, char** argv)
     int n = params.n;
     int N = n*n*n;
 
+    tic(5);
     double* b = malloc(N*sizeof(double));
     double* x = malloc(N*sizeof(double));
     double* r = malloc(N*sizeof(double));
     memset(b, 0, N*sizeof(double));
     memset(x, 0, N*sizeof(double));
     memset(r, 0, N*sizeof(double));
+    float memory_allocation_time =  toc(5);
 
     /* Set up right hand side */
 #ifdef USE_RHS0
@@ -744,7 +778,10 @@ int main(int argc, char** argv)
     for (int i = 0; i < n; ++i) rnorm2 += r[i]*r[i];
     printf("rnorm = %g\n", sqrt(rnorm2));
 
+    tic(5);
     free(r);
     free(x);
     free(b);
+    memory_allocation_time += toc(5);
+    printf("Memory allocation time = %g\n", memory_allocation_time);
 }

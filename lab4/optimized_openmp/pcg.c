@@ -12,10 +12,15 @@ float time_in_SSOR = 0;
 double dot(int n, const double* x, const double* y)
 {
     double result = 0;
+
+    // Parallelize the loop with OpenMP using reduction on 'result'
+    #pragma omp parallel for reduction(+:result)
     for (int i = 0; i < n; ++i)
         result += x[i]*y[i];
+
     return result;
 }
+
 
 /*@T
  * \section{Preconditioned CG}
